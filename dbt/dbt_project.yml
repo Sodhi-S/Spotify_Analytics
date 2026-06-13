@@ -1,0 +1,23 @@
+name: spotify_analytics
+version: "0.1.0"
+config-version: 2
+
+profile: spotify_analytics
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+
+models:
+  spotify_analytics:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table
+
+snapshots:
+  spotify_analytics:
+    +target_schema: "{{ target.schema }}"

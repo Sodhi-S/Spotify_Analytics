@@ -1,0 +1,29 @@
+{
+  "expectation_suite_name": "dim_tracks_mood",
+  "expectations": [
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "mood_confidence",
+        "min_value": 0,
+        "max_value": 1,
+        "mostly": 1.0
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "mood_label",
+        "value_set": ["happy", "sad", "angry", "calm", "energetic", "melancholic"]
+      }
+    },
+    {
+      "expectation_type": "expect_column_proportion_of_unique_values_to_be_between",
+      "kwargs": {
+        "column": "mood_label",
+        "min_value": 0,
+        "max_value": 0.75
+      }
+    }
+  ]
+}

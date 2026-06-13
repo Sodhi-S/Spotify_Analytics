@@ -1,0 +1,8 @@
+-r backend/requirements.txt
+SQLAlchemy>=2.0
+psycopg[binary]>=3.2
+psycopg-binary>=3.2
+dbt-core>=1.8
+dbt-postgres>=1.8
+dbt-snowflake>=1.8
+great_expectations>=1.0

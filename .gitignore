@@ -1,0 +1,92 @@
+# macOS / editor
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+!frontend/.env.example
+*.pem
+*.key
+*.crt
+
+# Python
+.venv/
+venv/
+env/
+.envrc
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+pip-wheel-metadata/
+*.egg-info/
+
+# Logs / local runtime output
+*.log
+logs/
+ingest.log
+*.pid
+*.out
+*.err
+
+# Local databases / data dumps
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+postgres_data/
+data/
+tmp/
+temp/
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/profiles.yml
+dbt/profiles.yml.user
+
+# Airflow local runtime
+airflow/logs/
+airflow/airflow.cfg
+airflow/airflow.db
+airflow/webserver_config.py
+airflow/standalone_admin_password.txt
+
+# Great Expectations local runtime
+great_expectations/uncommitted/
+great_expectations/.ge_store_backend_id
+
+# Frontend / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.vite-temp/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ML/audio generated artifacts
+model/*.pkl
+model/*.joblib
+model/*.onnx
+*.m4a
+*.mp3
+*.wav
+*.aac

@@ -1,0 +1,29 @@
+{
+  "expectation_suite_name": "raw_recent_tracks",
+  "expectations": [
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "track_name" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "artist_name" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "played_at" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_dateutil_parseable",
+      "kwargs": { "column": "played_at" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_less_than",
+      "kwargs": { "column": "played_at", "value": "$PARAMETER.current_timestamp" }
+    },
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": { "min_value": 1 }
+    }
+  ]
+}

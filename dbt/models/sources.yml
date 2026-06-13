@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: recent_tracks
+      - name: track_tags
+      - name: artists
+      - name: artist_tags
+      - name: weather

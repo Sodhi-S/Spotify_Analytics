@@ -2,11 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchOverview } from "./api";
 import { MoodDonutChart } from "./components/MoodDonutChart";
 import { PeriodSelector } from "./components/PeriodSelector";
+import { SettingsView } from "./components/SettingsView";
 import { StatCard } from "./components/StatCard";
+import { TopTracksView } from "./components/TopTracksView";
 import { TopList } from "./components/TopList";
+import { WeatherView } from "./components/WeatherView";
 import type { OverviewResponse, Period } from "./types";
 
+type View = "overview" | "top-tracks" | "weather" | "settings";
+
 function App() {
+  const [view, setView] = useState<View>("overview");
   const [period, setPeriod] = useState<Period>("30d");
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,30 +78,71 @@ function App() {
 
   return (
     <main className="dashboard-shell">
-      <header className="dashboard-header">
-        <div>
-          <p>Music Listening Intelligence</p>
-          <h1>Overview</h1>
-        </div>
-        <PeriodSelector value={period} onChange={setPeriod} />
-      </header>
+      <nav className="view-tabs" aria-label="Dashboard views">
+        <button
+          type="button"
+          className={view === "overview" ? "active" : ""}
+          onClick={() => setView("overview")}
+        >
+          Overview
+        </button>
+        <button
+          type="button"
+          className={view === "top-tracks" ? "active" : ""}
+          onClick={() => setView("top-tracks")}
+        >
+          Top Tracks
+        </button>
+        <button
+          type="button"
+          className={view === "weather" ? "active" : ""}
+          onClick={() => setView("weather")}
+        >
+          Weather
+        </button>
+        <button
+          type="button"
+          className={view === "settings" ? "active" : ""}
+          onClick={() => setView("settings")}
+        >
+          Settings
+        </button>
+      </nav>
 
-      {error ? <div className="banner">{error}</div> : null}
+      {view === "overview" ? (
+        <>
+          <header className="dashboard-header">
+            <div>
+              <p>Music Listening Intelligence</p>
+              <h1>Overview</h1>
+            </div>
+            <PeriodSelector value={period} onChange={setPeriod} />
+          </header>
 
-      <div className={isLoading ? "content loading" : "content"}>
-        <section className="stats-grid" aria-busy={isLoading}>
-          <StatCard label="Total Listens" value={overview?.total_listens ?? 0} />
-          <StatCard label="Unique Tracks" value={overview?.unique_tracks ?? 0} />
-          <StatCard label="Unique Artists" value={overview?.unique_artists ?? 0} />
-        </section>
+          {error ? <div className="banner">{error}</div> : null}
 
-        <section className="overview-grid">
-          <TopList title="Top 5 Tracks" items={topTracks} countLabel="plays" />
-          <TopList title="Top 5 Artists" items={topArtists} countLabel="plays" />
-          <TopList title="Top 5 Tags" items={topTags} countLabel="listens" />
-          <MoodDonutChart moodBreakdown={overview?.mood_breakdown ?? {}} />
-        </section>
-      </div>
+          <div className={isLoading ? "content loading" : "content"}>
+            <section className="stats-grid" aria-busy={isLoading}>
+              <StatCard label="Total Listens" value={overview?.total_listens ?? 0} />
+              <StatCard label="Unique Tracks" value={overview?.unique_tracks ?? 0} />
+              <StatCard label="Unique Artists" value={overview?.unique_artists ?? 0} />
+            </section>
+
+            <section className="overview-grid">
+              <TopList title="Top 5 Tracks" items={topTracks} countLabel="plays" />
+              <TopList title="Top 5 Artists" items={topArtists} countLabel="plays" />
+              <TopList title="Top 5 Tags" items={topTags} countLabel="listens" />
+              <MoodDonutChart moodBreakdown={overview?.mood_breakdown ?? {}} />
+            </section>
+          </div>
+        </>
+      ) : view === "top-tracks" ? (
+        <TopTracksView period={period} onPeriodChange={setPeriod} />
+      ) : view === "weather" ? (
+        <WeatherView period={period} onPeriodChange={setPeriod} />
+      ) : (
+        <SettingsView />
+      )}
     </main>
   );
 }

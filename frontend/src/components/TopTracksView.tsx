@@ -1,0 +1,137 @@
+import { useEffect, useState } from "react";
+import { fetchTopTracks } from "../api";
+import type { Period, TopTracksResponse } from "../types";
+import { PeriodSelector } from "./PeriodSelector";
+
+const LIMIT_OPTIONS = [10, 25, 50];
+
+interface TopTracksViewProps {
+  period: Period;
+  onPeriodChange: (period: Period) => void;
+}
+
+function formatDuration(ms: number) {
+  if (!ms) {
+    return "0m";
+  }
+  const minutes = Math.round(ms / 60000);
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours === 0) {
+    return `${minutes}m`;
+  }
+  return `${hours}h ${remainingMinutes}m`;
+}
+
+function formatMood(label: string | null, confidence: number | null) {
+  if (!label) {
+    return "Unclassified";
+  }
+  if (confidence === null) {
+    return label;
+  }
+  return `${label} ${(confidence * 100).toFixed(0)}%`;
+}
+
+export function TopTracksView({ period, onPeriodChange }: TopTracksViewProps) {
+  const [limit, setLimit] = useState(10);
+  const [data, setData] = useState<TopTracksResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    setError(null);
+
+    fetchTopTracks(period, limit)
+      .then((response) => {
+        if (!cancelled) {
+          setData(response);
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setError(err.message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [period, limit]);
+
+  return (
+    <>
+      <header className="dashboard-header">
+        <div>
+          <p>Music Listening Intelligence</p>
+          <h1>Top Tracks</h1>
+        </div>
+        <div className="header-controls">
+          <PeriodSelector value={period} onChange={onPeriodChange} />
+          <label className="select-control">
+            <span>Rows</span>
+            <select
+              value={limit}
+              onChange={(event) => setLimit(Number(event.target.value))}
+            >
+              {LIMIT_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </header>
+
+      {error ? <div className="banner">{error}</div> : null}
+
+      <section className={isLoading ? "panel top-tracks-panel loading" : "panel top-tracks-panel"}>
+        {data?.tracks.length ? (
+          <div className="tracks-table" role="table" aria-label="Top tracks">
+            <div className="tracks-row tracks-head" role="row">
+              <span>#</span>
+              <span>Track</span>
+              <span>Plays</span>
+              <span>Time</span>
+              <span>Mood</span>
+            </div>
+            {data.tracks.map((track) => (
+              <div className="tracks-row" role="row" key={track.track_id}>
+                <strong>{track.rank}</strong>
+                <div className="track-cell">
+                  <span>{track.name}</span>
+                  <small>
+                    {track.artist_name}
+                    {track.album ? ` · ${track.album}` : ""}
+                  </small>
+                  {track.top_tags.length ? (
+                    <div className="tag-strip">
+                      {track.top_tags.slice(0, 4).map((tag) => (
+                        <span key={tag}>{tag}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <strong>{track.play_count.toLocaleString()}</strong>
+                <span>{formatDuration(track.total_ms_played)}</span>
+                <span className={track.mood_label ? "mood-pill" : "mood-pill muted"}>
+                  {formatMood(track.mood_label, track.mood_confidence)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-state">No track data yet</p>
+        )}
+      </section>
+    </>
+  );
+}

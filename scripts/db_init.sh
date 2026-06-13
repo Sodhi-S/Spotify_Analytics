@@ -8,7 +8,10 @@ until docker compose exec -T postgres pg_isready -U postgres -d music_intelligen
   sleep 1
 done
 
-docker compose exec -T postgres psql -U postgres -d music_intelligence < backend/sql/001_raw_schema.sql
+for sql_file in backend/sql/*.sql; do
+  echo "Applying ${sql_file}..."
+  docker compose exec -T postgres psql -U postgres -d music_intelligence < "${sql_file}"
+done
 
 echo "Initialized raw schema."
 docker compose exec -T postgres psql -U postgres -d music_intelligence -c "\dn"

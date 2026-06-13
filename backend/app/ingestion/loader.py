@@ -193,20 +193,40 @@ class RawLoader:
             text(
                 """
                 insert into raw.weather (
-                    date, city, temp_c, precipitation, weather_code, fetched_at
+                    date, city, temp_c, temp_mean_c, temp_min_c, precipitation,
+                    rain, snowfall, precipitation_hours, weather_code, source, fetched_at
                 )
                 values (
-                    :date, :city, :temp_c, :precipitation, :weather_code,
+                    :date, :city, :temp_c, :temp_mean_c, :temp_min_c, :precipitation,
+                    :rain, :snowfall, :precipitation_hours, :weather_code, :source,
                     current_timestamp
                 )
                 on conflict (date, city) do update set
                     temp_c = excluded.temp_c,
+                    temp_mean_c = excluded.temp_mean_c,
+                    temp_min_c = excluded.temp_min_c,
                     precipitation = excluded.precipitation,
+                    rain = excluded.rain,
+                    snowfall = excluded.snowfall,
+                    precipitation_hours = excluded.precipitation_hours,
                     weather_code = excluded.weather_code,
+                    source = excluded.source,
                     fetched_at = current_timestamp
                 """
             ),
-            row,
+            {
+                "date": row["date"],
+                "city": row["city"],
+                "temp_c": row.get("temp_c"),
+                "temp_mean_c": row.get("temp_mean_c"),
+                "temp_min_c": row.get("temp_min_c"),
+                "precipitation": row.get("precipitation"),
+                "rain": row.get("rain"),
+                "snowfall": row.get("snowfall"),
+                "precipitation_hours": row.get("precipitation_hours"),
+                "weather_code": row.get("weather_code"),
+                "source": row.get("source", "open_meteo"),
+            },
         )
 
     def upsert_top_artist(

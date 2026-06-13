@@ -29,6 +29,7 @@ class Settings:
     target_sample_rate: int
     cors_origins: tuple[str, ...]
     mood_model_path: Path
+    dbt_executable: str
 
 
 def get_settings() -> Settings:
@@ -47,4 +48,5 @@ def get_settings() -> Settings:
         target_sample_rate=int(os.getenv("TARGET_SAMPLE_RATE", "22050")),
         cors_origins=tuple(origin.strip() for origin in cors.split(",") if origin.strip()),
         mood_model_path=ROOT_DIR / os.getenv("MOOD_MODEL_PATH", "model/mood_classifier.pkl"),
+        dbt_executable=os.getenv("DBT_EXECUTABLE", "dbt"),
     )

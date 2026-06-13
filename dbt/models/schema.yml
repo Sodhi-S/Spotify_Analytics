@@ -55,7 +55,8 @@ models:
       - name: mood_label
         tests:
           - accepted_values:
-              values: ['happy', 'sad', 'angry', 'calm', 'energetic', 'melancholic']
+              arguments:
+                values: ['happy', 'sad', 'angry', 'calm', 'energetic', 'melancholic']
 
   - name: dim_artists
     columns:
@@ -68,8 +69,9 @@ models:
       - name: is_current
         tests:
           - accepted_values:
-              values: [true, false]
-              quote: false
+              arguments:
+                values: [true, false]
+                quote: false
 
   - name: dim_dates
     columns:
@@ -78,12 +80,14 @@ models:
       - name: day_of_week
         tests:
           - accepted_values:
-              values: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+              arguments:
+                values: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
       - name: is_weekend
         tests:
           - accepted_values:
-              values: [true, false]
-              quote: false
+              arguments:
+                values: [true, false]
+                quote: false
 
   - name: mart_listening_summary
     columns:
@@ -100,3 +104,23 @@ models:
         tests: [not_null]
       - name: listen_count
         tests: [not_null]
+
+  - name: dim_weather
+    columns:
+      - name: date_id
+        tests: [not_null]
+      - name: city
+        tests: [not_null]
+      - name: weather_category
+        tests: [not_null]
+      - name: season
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Winter', 'Spring', 'Summer', 'Fall']
+      - name: had_precipitation
+        tests:
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false

@@ -1,6 +1,9 @@
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { fetchWeatherCorrelation } from "../api";
+import { formatCount, hideRealNumbers } from "../privacy";
 import type { Period, WeatherCorrelationResponse, WeatherSummary } from "../types";
+import { AnimatedNumber } from "./AnimatedNumber";
 import { PeriodSelector } from "./PeriodSelector";
 import { StatCard } from "./StatCard";
 
@@ -30,7 +33,9 @@ function SummaryList({
   title: string;
   summaries: WeatherSummary[];
 }) {
-  const maxListens = Math.max(...summaries.map((item) => item.total_listens), 1);
+  const maxListens = hideRealNumbers
+    ? 1
+    : Math.max(...summaries.map((item) => item.total_listens), 1);
 
   return (
     <section className="panel weather-summary-panel">
@@ -39,14 +44,29 @@ function SummaryList({
         <p className="empty-state">No weather data yet</p>
       ) : (
         <div className="weather-summary-list">
-          {summaries.map((summary) => (
-            <article className="weather-summary-row" key={summary.label}>
+          {summaries.map((summary, index) => (
+            <article
+              className="weather-summary-row"
+              key={summary.label}
+              style={{ "--row-index": index } as CSSProperties}
+            >
               <div className="weather-row-main">
                 <strong>{summary.label}</strong>
-                <span>{summary.total_listens.toLocaleString()} listens</span>
+                <span>
+                  <AnimatedNumber
+                    value={summary.total_listens}
+                    formatter={(value) => formatCount(value, "listens")}
+                  />
+                </span>
               </div>
               <div className="weather-meter" aria-hidden="true">
-                <span style={{ width: `${(summary.total_listens / maxListens) * 100}%` }} />
+                <span
+                  style={{
+                    width: hideRealNumbers
+                      ? "100%"
+                      : `${(summary.total_listens / maxListens) * 100}%`,
+                  }}
+                />
               </div>
               <div className="weather-row-meta">
                 <span>{summary.total_days} days</span>
@@ -58,7 +78,7 @@ function SummaryList({
                 <div className="tag-strip">
                   {summary.top_tags.slice(0, 5).map((tag) => (
                     <span key={tag.tag}>
-                      {tag.tag} ({tag.listen_count.toLocaleString()})
+                      {tag.tag} (<AnimatedNumber value={tag.listen_count} formatter={formatCount} />)
                     </span>
                   ))}
                 </div>
@@ -153,6 +173,48 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
           <SummaryList title="By Season" summaries={data?.summary_by_season ?? []} />
         </section>
 
+        <section className="panel weather-artist-panel">
+          <div className="panel-heading">
+            <h2>Weather Artist Contexts</h2>
+            <span>{data?.weather_city ?? "Selected city"}</span>
+          </div>
+          {data?.artist_weather_contexts.length ? (
+            <div className="weather-artist-grid">
+              {data.artist_weather_contexts.map((artist, index) => (
+                <article
+                  className="weather-artist-card"
+                  key={artist.artist_id}
+                  style={{ "--row-index": index } as CSSProperties}
+                >
+                  <div className="artist-avatar" aria-hidden="true" />
+                  <div>
+                    <strong>{artist.name}</strong>
+                    <span>
+                      {artist.weather_category} ·{" "}
+                      <AnimatedNumber
+                        value={artist.total_listens}
+                        formatter={(value) => formatCount(value, "listens")}
+                      />
+                    </span>
+                    <div className="fingerprint-meter">
+                      <span
+                        style={{
+                          width: hideRealNumbers
+                            ? "100%"
+                            : `${Math.round(artist.weather_share * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p>{artist.insight}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">No weather-linked artist context yet</p>
+          )}
+        </section>
+
         <section className="panel weather-daily-panel">
           <h2>Daily Weather + Listening</h2>
           {data?.daily_data.length ? (
@@ -165,13 +227,19 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
                 <span>Listens</span>
                 <span>Mood</span>
               </div>
-              {data.daily_data.slice(-30).reverse().map((day) => (
-                <div className="weather-daily-row" key={day.date}>
+              {data.daily_data.slice(-30).reverse().map((day, index) => (
+                <div
+                  className="weather-daily-row"
+                  key={day.date}
+                  style={{ "--row-index": index } as CSSProperties}
+                >
                   <strong>{day.date}</strong>
                   <span>{day.weather_category}</span>
                   <span>{formatNumber(day.temp_c, "C")}</span>
                   <span>{formatNumber(day.precipitation, "mm")}</span>
-                  <span>{day.total_listens.toLocaleString()}</span>
+                  <span>
+                    <AnimatedNumber value={day.total_listens} formatter={formatCount} />
+                  </span>
                   <span>{formatMoodScore(day.mood_score)}</span>
                 </div>
               ))}

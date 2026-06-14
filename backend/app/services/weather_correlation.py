@@ -101,6 +101,7 @@ class WeatherCorrelationService:
             summary_by_weather=self._summary("weather_category", start_date, weather_city),
             summary_by_temperature=self._summary("temperature_bucket", start_date, weather_city),
             summary_by_season=self._summary("season", start_date, weather_city),
+            artist_weather_contexts=self._artist_weather_contexts(start_date, weather_city),
         )
 
     def _daily_data(self, start_date: object | None, weather_city: str) -> list[dict[str, Any]]:
@@ -232,6 +233,78 @@ class WeatherCorrelationService:
                 }
             )
         return summaries
+
+    def _artist_weather_contexts(
+        self,
+        start_date: object | None,
+        weather_city: str,
+    ) -> list[dict[str, Any]]:
+        date_filter = "and fl.date_id >= :start_date" if start_date is not None else ""
+        sql = text(
+            f"""
+            with artist_weather as (
+                select
+                    fl.artist_id,
+                    coalesce(da.name, 'Unknown Artist') as name,
+                    dw.weather_category,
+                    count(*) as total_listens
+                from {qualified_table("fact_listens")} fl
+                join {qualified_table("dim_weather")} dw on fl.date_id = dw.date_id
+                left join {qualified_table("dim_artists")} da
+                    on fl.artist_id = da.artist_id and da.is_current = true
+                where dw.city = :weather_city
+                {date_filter}
+                group by fl.artist_id, da.name, dw.weather_category
+            ),
+            ranked as (
+                select
+                    artist_id,
+                    name,
+                    weather_category,
+                    total_listens,
+                    sum(total_listens) over (partition by artist_id) as artist_total_listens,
+                    row_number() over (
+                        partition by artist_id
+                        order by total_listens desc, weather_category asc
+                    ) as weather_rank
+                from artist_weather
+            )
+            select
+                artist_id,
+                name,
+                weather_category,
+                total_listens,
+                artist_total_listens
+            from ranked
+            where weather_rank = 1
+              and weather_category not in ('Unknown')
+            order by total_listens desc, name asc
+            limit 8
+            """
+        )
+        contexts: list[dict[str, Any]] = []
+        for row in self.connection.execute(
+            sql,
+            {**_params(start_date), "weather_city": weather_city},
+        ):
+            item = row._mapping
+            total_listens = int(item["total_listens"] or 0)
+            artist_total = int(item["artist_total_listens"] or 0)
+            share = total_listens / artist_total if artist_total else 0
+            contexts.append(
+                {
+                    "artist_id": item["artist_id"],
+                    "name": item["name"],
+                    "weather_category": item["weather_category"],
+                    "total_listens": total_listens,
+                    "weather_share": share,
+                    "insight": (
+                        f"{item['name']} shows up most on {item['weather_category'].lower()} "
+                        f"days, with {total_listens:,} listens in this period."
+                    ),
+                }
+            )
+        return contexts
 
 
 def validate_weather_period(period: str) -> None:

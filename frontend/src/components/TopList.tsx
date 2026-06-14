@@ -1,3 +1,7 @@
+import type { CSSProperties } from "react";
+import { formatCount } from "../privacy";
+import { AnimatedNumber } from "./AnimatedNumber";
+
 interface TopListItem {
   id: string;
   name: string;
@@ -29,15 +33,17 @@ export function TopList({
         <p className="empty-state">No data yet</p>
       ) : (
         <ol className={variant === "media" ? "top-list top-list-media" : "top-list"}>
-          {items.map((item) => (
-            <li key={item.id}>
+          {items.map((item, index) => (
+            <li key={item.id} style={{ "--row-index": index } as CSSProperties}>
               {variant === "media" ? <div className="top-list-artwork" aria-hidden="true" /> : null}
               <div className="top-list-copy">
                 <span>{item.name}</span>
                 {item.subtitle ? <small>{item.subtitle}</small> : null}
               </div>
-              <strong className="top-list-count" aria-label={`${item.count} ${countLabel}`}>
-                <span>{item.count.toLocaleString()}</span>
+              <strong className="top-list-count" aria-label={formatCount(item.count, countLabel)}>
+                <span>
+                  <AnimatedNumber value={item.count} formatter={formatCount} />
+                </span>
                 {showCountLabel ? <small>{countLabel}</small> : null}
               </strong>
             </li>

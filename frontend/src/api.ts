@@ -1,5 +1,6 @@
 import type {
   AppSettings,
+  ArtistMoodFingerprintsResponse,
   CityOption,
   OverviewResponse,
   Period,
@@ -68,6 +69,25 @@ export async function fetchTopTracks(
       response.status === 400
         ? "Invalid top tracks filter selected."
         : "Unable to load top tracks.";
+    throw new Error(message);
+  }
+  return response.json();
+}
+
+export async function fetchArtistMoodFingerprints(
+  period: Period,
+  limit = 10,
+): Promise<ArtistMoodFingerprintsResponse> {
+  const params = new URLSearchParams({
+    period,
+    limit: String(limit),
+  });
+  const response = await fetch(`${API_BASE_URL}/api/moods/artist-fingerprints?${params}`);
+  if (!response.ok) {
+    const message =
+      response.status === 400
+        ? "Invalid artist mood filter selected."
+        : "Unable to load artist mood fingerprints.";
     throw new Error(message);
   }
   return response.json();

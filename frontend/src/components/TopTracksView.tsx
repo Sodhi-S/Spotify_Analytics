@@ -1,6 +1,9 @@
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { fetchTopTracks } from "../api";
+import { formatCount, formatDuration } from "../privacy";
 import type { Period, TopTracksResponse } from "../types";
+import { AnimatedNumber } from "./AnimatedNumber";
 import { PeriodSelector } from "./PeriodSelector";
 
 const LIMIT_OPTIONS = [10, 25, 50];
@@ -8,19 +11,6 @@ const LIMIT_OPTIONS = [10, 25, 50];
 interface TopTracksViewProps {
   period: Period;
   onPeriodChange: (period: Period) => void;
-}
-
-function formatDuration(ms: number) {
-  if (!ms) {
-    return "0m";
-  }
-  const minutes = Math.round(ms / 60000);
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (hours === 0) {
-    return `${minutes}m`;
-  }
-  return `${hours}h ${remainingMinutes}m`;
 }
 
 function formatMood(label: string | null, confidence: number | null) {
@@ -103,8 +93,13 @@ export function TopTracksView({ period, onPeriodChange }: TopTracksViewProps) {
               <span>Time</span>
               <span>Mood</span>
             </div>
-            {data.tracks.map((track) => (
-              <div className="tracks-row" role="row" key={track.track_id}>
+            {data.tracks.map((track, index) => (
+              <div
+                className="tracks-row"
+                role="row"
+                key={track.track_id}
+                style={{ "--row-index": index } as CSSProperties}
+              >
                 <strong>{track.rank}</strong>
                 <div className="track-cell">
                   <span>{track.name}</span>
@@ -120,7 +115,9 @@ export function TopTracksView({ period, onPeriodChange }: TopTracksViewProps) {
                     </div>
                   ) : null}
                 </div>
-                <strong>{track.play_count.toLocaleString()}</strong>
+                <strong>
+                  <AnimatedNumber value={track.play_count} formatter={formatCount} />
+                </strong>
                 <span>{formatDuration(track.total_ms_played)}</span>
                 <span className={track.mood_label ? "mood-pill" : "mood-pill muted"}>
                   {formatMood(track.mood_label, track.mood_confidence)}

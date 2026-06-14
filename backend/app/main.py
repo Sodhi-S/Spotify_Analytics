@@ -10,6 +10,7 @@ from app.api.schemas import (
     AppSettingsResponse,
     AppSettingsUpdate,
     CityOption,
+    ArtistMoodFingerprintsResponse,
     OverviewResponse,
     TopTracksResponse,
     WeatherCorrelationResponse,
@@ -17,6 +18,10 @@ from app.api.schemas import (
 from app.core.config import get_settings
 from app.db import db_connection
 from app.ingestion.openmeteo import OpenMeteoClient
+from app.services.artist_mood_fingerprints import (
+    ArtistMoodFingerprintService,
+    validate_artist_mood_params,
+)
 from app.services.overview import VALID_PERIODS, OverviewService
 from app.pipeline.weather_jobs import process_weather_city
 from app.services.settings import SettingsService, WeatherLocation
@@ -141,6 +146,33 @@ def get_top_tracks(
             return TopTracksService(connection).get_top_tracks(period, limit)
     except SQLAlchemyError:
         logger.exception("Database error while loading top tracks")
+        raise HTTPException(status_code=500, detail="Internal server error") from None
+
+
+@app.get("/api/moods/artist-fingerprints", response_model=ArtistMoodFingerprintsResponse)
+def get_artist_mood_fingerprints(
+    period: str = Query(
+        default="all",
+        description="Accepted values: 7d, 30d, 6m, all",
+    ),
+    limit: int = Query(
+        default=10,
+        description="Number of artists to return. Accepted range: 5 to 10.",
+    ),
+) -> ArtistMoodFingerprintsResponse:
+    try:
+        validate_artist_mood_params(period, limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    try:
+        with db_connection() as connection:
+            return ArtistMoodFingerprintService(connection).get_artist_mood_fingerprints(
+                period,
+                limit,
+            )
+    except SQLAlchemyError:
+        logger.exception("Database error while loading artist mood fingerprints")
         raise HTTPException(status_code=500, detail="Internal server error") from None
 
 

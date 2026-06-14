@@ -1,4 +1,4 @@
-{{ config(materialized='incremental', unique_key='track_id') }}
+{{ config(materialized='incremental', unique_key='track_id', on_schema_change='sync_all_columns') }}
 
 with tracks as (
     select
@@ -30,6 +30,20 @@ existing as (
             cast(null as numeric) as mood_confidence
         where 1 = 0
     {% endif %}
+),
+
+emotion_features as (
+    select
+        track_id,
+        valence,
+        energy,
+        mood_label,
+        predicted_moods,
+        model_name,
+        model_version,
+        classified_at
+    from {{ source('raw', 'track_emotion_features') }}
+    where error_message is null
 )
 
 select
@@ -40,7 +54,14 @@ select
     tracks.album,
     tracks.top_tags,
     existing.preview_url,
-    existing.mood_label,
-    existing.mood_confidence
+    coalesce(emotion_features.mood_label, existing.mood_label) as mood_label,
+    existing.mood_confidence,
+    emotion_features.valence,
+    emotion_features.energy,
+    emotion_features.predicted_moods,
+    emotion_features.model_name as emotion_model_name,
+    emotion_features.model_version as emotion_model_version,
+    emotion_features.classified_at as emotion_classified_at
 from tracks
 left join existing on tracks.track_id = existing.track_id
+left join emotion_features on tracks.track_id = emotion_features.track_id

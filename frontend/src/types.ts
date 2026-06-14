@@ -50,6 +50,33 @@ export interface MoodDistribution {
   unclassified: number;
 }
 
+export interface ArtistMoodFingerprint {
+  rank: number;
+  artist_id: string;
+  name: string;
+  image_url: string | null;
+  mood_label: string;
+  avg_valence: number | null;
+  avg_energy: number | null;
+  play_count: number;
+  listening_minutes: number;
+  dominant_context: string;
+  insight: string;
+}
+
+export interface ArtistMoodCallout {
+  kind: string;
+  artist_name: string | null;
+  value: number | null;
+  text: string;
+}
+
+export interface ArtistMoodFingerprintsResponse {
+  period: Period;
+  artists: ArtistMoodFingerprint[];
+  callouts: ArtistMoodCallout[];
+}
+
 export interface WeatherSummary {
   label: string;
   total_days: number;
@@ -62,6 +89,15 @@ export interface WeatherSummary {
     tag: string;
     listen_count: number;
   }[];
+}
+
+export interface WeatherArtistContext {
+  artist_id: string;
+  name: string;
+  weather_category: string;
+  total_listens: number;
+  weather_share: number;
+  insight: string;
 }
 
 export interface WeatherCorrelationResponse {
@@ -90,6 +126,7 @@ export interface WeatherCorrelationResponse {
   summary_by_weather: WeatherSummary[];
   summary_by_temperature: WeatherSummary[];
   summary_by_season: WeatherSummary[];
+  artist_weather_contexts: WeatherArtistContext[];
 }
 
 export interface AppSettings {

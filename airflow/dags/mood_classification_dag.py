@@ -7,11 +7,11 @@ from airflow.operators.python import PythonOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 
 from _shared import notify_failure
-from app.pipeline.mood_jobs import (
-    fetch_itunes_previews,
-    find_unclassified_tracks,
-    run_librosa_inference,
-    write_mood_labels,
+from app.pipeline.music2emo_jobs import (
+    fetch_music2emo_previews,
+    find_unscored_music2emo_tracks,
+    rebuild_music2emo_models,
+    run_music2emo_inference,
 )
 
 DEFAULT_ARGS = {
@@ -24,7 +24,7 @@ DEFAULT_ARGS = {
 
 with DAG(
     dag_id="mood_classification_dag",
-    description="Find tracks with previews and classify mood using the Librosa model.",
+    description="Find tracks with previews and score valence/energy using Music2Emo.",
     default_args=DEFAULT_ARGS,
     schedule="*/30 * * * *",
     start_date=datetime(2026, 3, 1),
@@ -42,30 +42,36 @@ with DAG(
         timeout=60 * 25,
     )
 
-    find_unclassified_tracks_task = PythonOperator(
-        task_id="find_unclassified_tracks",
-        python_callable=find_unclassified_tracks,
+    refresh_tracks_before_lookup_task = PythonOperator(
+        task_id="refresh_tracks_before_lookup",
+        python_callable=rebuild_music2emo_models,
+    )
+
+    find_unscored_tracks_task = PythonOperator(
+        task_id="find_unscored_tracks",
+        python_callable=find_unscored_music2emo_tracks,
     )
 
     fetch_itunes_previews_task = PythonOperator(
         task_id="fetch_itunes_previews",
-        python_callable=fetch_itunes_previews,
+        python_callable=fetch_music2emo_previews,
     )
 
-    run_librosa_inference_task = PythonOperator(
-        task_id="run_librosa_inference",
-        python_callable=run_librosa_inference,
+    run_music2emo_inference_task = PythonOperator(
+        task_id="run_music2emo_inference",
+        python_callable=run_music2emo_inference,
     )
 
-    write_mood_labels_task = PythonOperator(
-        task_id="write_mood_labels",
-        python_callable=write_mood_labels,
+    refresh_tracks_after_inference_task = PythonOperator(
+        task_id="refresh_tracks_after_inference",
+        python_callable=rebuild_music2emo_models,
     )
 
     (
         wait_for_lastfm_ingest
-        >> find_unclassified_tracks_task
+        >> refresh_tracks_before_lookup_task
+        >> find_unscored_tracks_task
         >> fetch_itunes_previews_task
-        >> run_librosa_inference_task
-        >> write_mood_labels_task
+        >> run_music2emo_inference_task
+        >> refresh_tracks_after_inference_task
     )

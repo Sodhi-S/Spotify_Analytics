@@ -5,6 +5,8 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import { formatCount } from "../privacy";
+import { AnimatedNumber } from "./AnimatedNumber";
 
 const MOOD_COLORS: Record<string, string> = {
   happy: "#54f58b",
@@ -51,7 +53,7 @@ function MoodTooltip({ active, payload }: MoodTooltipProps) {
     <div className="chart-tooltip">
       <strong>{item.name}</strong>
       <span>
-        {item.value.toLocaleString()} listens · {(item.percent * 100).toFixed(1)}%
+        {formatCount(item.value, "listens")} · {(item.percent * 100).toFixed(1)}%
       </span>
     </div>
   );
@@ -76,7 +78,12 @@ export function MoodDonutChart({ moodBreakdown }: MoodDonutChartProps) {
     <section className="panel mood-panel">
       <div className="panel-heading">
         <h2>Mood Breakdown</h2>
-        <span>{classifiedTotal.toLocaleString()} classified</span>
+        <span>
+          <AnimatedNumber
+            value={classifiedTotal}
+            formatter={(value) => formatCount(value, "classified")}
+          />
+        </span>
       </div>
 
       {data.length === 0 ? (
@@ -108,7 +115,7 @@ export function MoodDonutChart({ moodBreakdown }: MoodDonutChartProps) {
                   dominantBaseline="middle"
                   className="chart-center-value"
                 >
-                  {classifiedTotal.toLocaleString()}
+                  <AnimatedNumber value={classifiedTotal} formatter={formatCount} />
                 </text>
                 <text
                   x="50%"
@@ -128,7 +135,9 @@ export function MoodDonutChart({ moodBreakdown }: MoodDonutChartProps) {
               <li key={mood}>
                 <span className="legend-swatch" style={{ background: MOOD_COLORS[mood] }} />
                 <span>{mood}</span>
-                <strong>{(moodBreakdown[mood] ?? 0).toLocaleString()}</strong>
+                <strong>
+                  <AnimatedNumber value={moodBreakdown[mood] ?? 0} formatter={formatCount} />
+                </strong>
               </li>
             ))}
           </ul>

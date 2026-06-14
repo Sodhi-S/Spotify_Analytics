@@ -9,3 +9,4 @@ sources:
       - name: artists
       - name: artist_tags
       - name: weather
+      - name: track_emotion_features

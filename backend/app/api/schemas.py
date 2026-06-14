@@ -45,6 +45,33 @@ class TopTracksResponse(BaseModel):
     tracks: list[TopTrackDetail]
 
 
+class ArtistMoodFingerprint(BaseModel):
+    rank: int = Field(ge=1)
+    artist_id: str
+    name: str
+    image_url: str | None = None
+    mood_label: str
+    avg_valence: float | None = Field(default=None, ge=0, le=1)
+    avg_energy: float | None = Field(default=None, ge=0, le=1)
+    play_count: int = Field(ge=0)
+    listening_minutes: float = Field(ge=0)
+    dominant_context: str
+    insight: str
+
+
+class ArtistMoodCallout(BaseModel):
+    kind: str
+    artist_name: str | None = None
+    value: float | None = None
+    text: str
+
+
+class ArtistMoodFingerprintsResponse(BaseModel):
+    period: Period
+    artists: list[ArtistMoodFingerprint]
+    callouts: list[ArtistMoodCallout]
+
+
 class MoodDistribution(BaseModel):
     happy: int = Field(ge=0)
     sad: int = Field(ge=0)
@@ -87,6 +114,15 @@ class WeatherSummary(BaseModel):
     top_tags: list[TopTag]
 
 
+class WeatherArtistContext(BaseModel):
+    artist_id: str
+    name: str
+    weather_category: str
+    total_listens: int = Field(ge=0)
+    weather_share: float = Field(ge=0, le=1)
+    insight: str
+
+
 class WeatherCorrelationResponse(BaseModel):
     period: Period
     weather_city: str
@@ -94,6 +130,7 @@ class WeatherCorrelationResponse(BaseModel):
     summary_by_weather: list[WeatherSummary]
     summary_by_temperature: list[WeatherSummary]
     summary_by_season: list[WeatherSummary]
+    artist_weather_contexts: list[WeatherArtistContext]
 
 
 class CityOption(BaseModel):

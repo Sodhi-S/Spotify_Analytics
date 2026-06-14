@@ -29,6 +29,11 @@ class Settings:
     target_sample_rate: int
     cors_origins: tuple[str, ...]
     mood_model_path: Path
+    music2emo_repo_path: Path | None
+    music2emo_model_weights: Path | None
+    music2emo_preview_limit: int
+    music2emo_inference_limit: int
+    music2emo_run_after_ingest: bool
     dbt_executable: str
 
 
@@ -48,5 +53,19 @@ def get_settings() -> Settings:
         target_sample_rate=int(os.getenv("TARGET_SAMPLE_RATE", "22050")),
         cors_origins=tuple(origin.strip() for origin in cors.split(",") if origin.strip()),
         mood_model_path=ROOT_DIR / os.getenv("MOOD_MODEL_PATH", "model/mood_classifier.pkl"),
+        music2emo_repo_path=(
+            Path(repo_path).expanduser()
+            if (repo_path := os.getenv("MUSIC2EMO_REPO_PATH", "").strip())
+            else None
+        ),
+        music2emo_model_weights=(
+            Path(weights_path).expanduser()
+            if (weights_path := os.getenv("MUSIC2EMO_MODEL_WEIGHTS", "").strip())
+            else None
+        ),
+        music2emo_preview_limit=int(os.getenv("MUSIC2EMO_PREVIEW_LIMIT", "100")),
+        music2emo_inference_limit=int(os.getenv("MUSIC2EMO_INFERENCE_LIMIT", "25")),
+        music2emo_run_after_ingest=os.getenv("MUSIC2EMO_RUN_AFTER_INGEST", "true").lower()
+        in {"1", "true", "yes", "on"},
         dbt_executable=os.getenv("DBT_EXECUTABLE", "dbt"),
     )

@@ -7,13 +7,13 @@ import {
 } from "recharts";
 
 const MOOD_COLORS: Record<string, string> = {
-  happy: "#facc15",
-  sad: "#3b82f6",
-  angry: "#ef4444",
-  calm: "#a78bfa",
-  energetic: "#f97316",
-  melancholic: "#6b7280",
-  unclassified: "#e5e7eb",
+  happy: "#54f58b",
+  sad: "#4b7cff",
+  angry: "#ff5f6d",
+  calm: "#4da3ff",
+  energetic: "#f7c843",
+  melancholic: "#6e756f",
+  unclassified: "#54f58b",
 };
 
 const MOOD_ORDER = [
@@ -93,7 +93,7 @@ export function MoodDonutChart({ moodBreakdown }: MoodDonutChartProps) {
                   innerRadius="58%"
                   outerRadius="82%"
                   paddingAngle={2}
-                  stroke="#ffffff"
+                  stroke="#101411"
                   strokeWidth={2}
                 >
                   {data.map((entry) => (

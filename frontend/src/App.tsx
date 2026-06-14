@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchOverview } from "./api";
-import { MoodDonutChart } from "./components/MoodDonutChart";
+import { MoodsView } from "./components/MoodsView";
 import { PeriodSelector } from "./components/PeriodSelector";
 import { SettingsView } from "./components/SettingsView";
 import { StatCard } from "./components/StatCard";
@@ -9,7 +9,7 @@ import { TopList } from "./components/TopList";
 import { WeatherView } from "./components/WeatherView";
 import type { OverviewResponse, Period } from "./types";
 
-type View = "overview" | "top-tracks" | "weather" | "settings";
+type View = "overview" | "top-tracks" | "moods" | "weather" | "settings";
 
 function App() {
   const [view, setView] = useState<View>("overview");
@@ -95,6 +95,13 @@ function App() {
         </button>
         <button
           type="button"
+          className={view === "moods" ? "active" : ""}
+          onClick={() => setView("moods")}
+        >
+          Moods
+        </button>
+        <button
+          type="button"
           className={view === "weather" ? "active" : ""}
           onClick={() => setView("weather")}
         >
@@ -128,16 +135,43 @@ function App() {
               <StatCard label="Unique Artists" value={overview?.unique_artists ?? 0} />
             </section>
 
-            <section className="overview-grid">
-              <TopList title="Top 5 Tracks" items={topTracks} countLabel="plays" />
-              <TopList title="Top 5 Artists" items={topArtists} countLabel="plays" />
-              <TopList title="Top 5 Tags" items={topTags} countLabel="listens" />
-              <MoodDonutChart moodBreakdown={overview?.mood_breakdown ?? {}} />
+            <section className="overview-feature-grid">
+              <TopList
+                title="Top 5 Tracks"
+                items={topTracks}
+                countLabel="plays"
+                variant="media"
+                showCountLabel
+              />
+              <TopList
+                title="Top 5 Artists"
+                items={topArtists}
+                countLabel="plays"
+                variant="media"
+                showCountLabel
+              />
+            </section>
+
+            <section className="overview-bottom-grid">
+              <TopList
+                title="Top 5 Tags"
+                items={topTags}
+                countLabel="listens"
+                className="overview-tags-panel"
+              />
             </section>
           </div>
         </>
       ) : view === "top-tracks" ? (
         <TopTracksView period={period} onPeriodChange={setPeriod} />
+      ) : view === "moods" ? (
+        <MoodsView
+          period={period}
+          onPeriodChange={setPeriod}
+          moodBreakdown={overview?.mood_breakdown ?? {}}
+          isLoading={isLoading}
+          error={error}
+        />
       ) : view === "weather" ? (
         <WeatherView period={period} onPeriodChange={setPeriod} />
       ) : (

@@ -4,6 +4,7 @@ import { fetchTopTracks } from "../api";
 import { formatCount, formatDuration } from "../privacy";
 import type { Period, TopTracksResponse } from "../types";
 import { AnimatedNumber } from "./AnimatedNumber";
+import { ImageThumbnail } from "./ImageThumbnail";
 import { PeriodSelector } from "./PeriodSelector";
 
 const LIMIT_OPTIONS = [10, 25, 50];
@@ -101,19 +102,26 @@ export function TopTracksView({ period, onPeriodChange }: TopTracksViewProps) {
                 style={{ "--row-index": index } as CSSProperties}
               >
                 <strong>{track.rank}</strong>
-                <div className="track-cell">
-                  <span>{track.name}</span>
-                  <small>
-                    {track.artist_name}
-                    {track.album ? ` · ${track.album}` : ""}
-                  </small>
-                  {track.top_tags.length ? (
-                    <div className="tag-strip">
-                      {track.top_tags.slice(0, 4).map((tag) => (
-                        <span key={tag}>{tag}</span>
-                      ))}
-                    </div>
-                  ) : null}
+                <div className="track-identity">
+                  <ImageThumbnail
+                    src={track.album_image_url}
+                    className="track-artwork"
+                    alt=""
+                  />
+                  <div className="track-cell">
+                    <span>{track.name}</span>
+                    <small>
+                      {track.artist_name}
+                      {track.album ? ` · ${track.album}` : ""}
+                    </small>
+                    {track.top_tags.length ? (
+                      <div className="tag-strip">
+                        {track.top_tags.slice(0, 4).map((tag) => (
+                          <span key={tag}>{tag}</span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
                 <strong>
                   <AnimatedNumber value={track.play_count} formatter={formatCount} />

@@ -132,13 +132,14 @@ class OverviewService:
                 fl.track_id,
                 coalesce(dt.name, 'Unknown Track') as name,
                 coalesce(dt.artist_name, da.name, 'Unknown Artist') as artist_name,
+                dt.album_image_url,
                 count(*) as play_count
             from {qualified_table("fact_listens")} fl
             left join {qualified_table("dim_tracks")} dt on fl.track_id = dt.track_id
             left join {qualified_table("dim_artists")} da
                 on fl.artist_id = da.artist_id and da.is_current = true
             {_date_clause("fl.date_id", period_filter)}
-            group by fl.track_id, dt.name, dt.artist_name, da.name
+            group by fl.track_id, dt.name, dt.artist_name, da.name, dt.album_image_url
             order by play_count desc, name asc
             limit 5
             """
@@ -155,12 +156,13 @@ class OverviewService:
             select
                 fl.artist_id,
                 coalesce(da.name, 'Unknown Artist') as name,
+                da.image_url,
                 count(*) as play_count
             from {qualified_table("fact_listens")} fl
             left join {qualified_table("dim_artists")} da
                 on fl.artist_id = da.artist_id and da.is_current = true
             {_date_clause("fl.date_id", period_filter)}
-            group by fl.artist_id, da.name
+            group by fl.artist_id, da.name, da.image_url
             order by play_count desc, name asc
             limit 5
             """

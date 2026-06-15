@@ -63,6 +63,30 @@ create table if not exists raw.artist_tags (
     constraint uq_artist_tags_artist_name unique (artist_name)
 );
 
+create table if not exists raw.track_image_enrichments (
+    track_id text primary key,
+    album_image_url text,
+    album_image_source text,
+    album_image_width integer,
+    album_image_height integer,
+    album_image_updated_at timestamptz,
+    raw_payload jsonb not null default '{}'::jsonb,
+    unresolved_reason text,
+    attempted_at timestamptz not null default current_timestamp
+);
+
+create table if not exists raw.artist_image_enrichments (
+    artist_id text primary key,
+    image_url text,
+    image_source text,
+    image_width integer,
+    image_height integer,
+    image_updated_at timestamptz,
+    raw_payload jsonb not null default '{}'::jsonb,
+    unresolved_reason text,
+    attempted_at timestamptz not null default current_timestamp
+);
+
 create table if not exists raw.top_artists (
     id bigserial primary key,
     artist_name text not null,

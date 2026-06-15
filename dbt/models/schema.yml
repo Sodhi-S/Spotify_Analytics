@@ -52,6 +52,8 @@ models:
         tests: [not_null]
       - name: artist_id
         tests: [not_null]
+      - name: album_image_url
+      - name: album_image_source
       - name: mood_label
         tests:
           - accepted_values:
@@ -66,6 +68,8 @@ models:
         tests: [not_null]
       - name: name
         tests: [not_null]
+      - name: image_url
+      - name: image_source
       - name: is_current
         tests:
           - accepted_values:

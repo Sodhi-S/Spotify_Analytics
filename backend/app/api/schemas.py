@@ -13,12 +13,14 @@ class TopTrack(BaseModel):
     name: str
     artist_name: str
     play_count: int = Field(ge=0)
+    album_image_url: str | None = None
 
 
 class TopArtist(BaseModel):
     artist_id: str
     name: str
     play_count: int = Field(ge=0)
+    image_url: str | None = None
 
 
 class TopTag(BaseModel):
@@ -37,6 +39,7 @@ class TopTrackDetail(BaseModel):
     mood_label: str | None = None
     mood_confidence: float | None = Field(default=None, ge=0, le=1)
     top_tags: list[str]
+    album_image_url: str | None = None
 
 
 class TopTracksResponse(BaseModel):
@@ -117,10 +120,65 @@ class WeatherSummary(BaseModel):
 class WeatherArtistContext(BaseModel):
     artist_id: str
     name: str
+    image_url: str | None = None
     weather_category: str
     total_listens: int = Field(ge=0)
     weather_share: float = Field(ge=0, le=1)
     insight: str
+
+
+class WeatherMoodShift(BaseModel):
+    weather_category: str
+    total_listens: int = Field(ge=0)
+    listening_minutes: float = Field(ge=0)
+    avg_valence: float = Field(ge=0, le=1)
+    avg_energy: float = Field(ge=0, le=1)
+    valence_delta: float
+    energy_delta: float
+    valence_percent_change: float
+    energy_percent_change: float
+    dominant_mood_quadrant: str
+    top_artist_name: str | None = None
+    insight: str
+    is_strongest_shift: bool = False
+
+
+class WeatherMoodHeatmapCell(BaseModel):
+    weather_category: str
+    mood_quadrant: str
+    stream_count: int = Field(ge=0)
+    listening_minutes: float = Field(ge=0)
+    percentage: float = Field(ge=0, le=1)
+    is_strongest: bool = False
+
+
+class WeatherMoodBaseline(BaseModel):
+    avg_valence: float | None = Field(default=None, ge=0, le=1)
+    avg_energy: float | None = Field(default=None, ge=0, le=1)
+    total_listens: int = Field(ge=0)
+    listening_minutes: float = Field(ge=0)
+
+
+class WeatherMoodPoint(BaseModel):
+    weather_category: str
+    avg_valence: float = Field(ge=0, le=1)
+    avg_energy: float = Field(ge=0, le=1)
+    dominant_mood_quadrant: str
+    top_artist_name: str | None = None
+    stream_count: int = Field(ge=0)
+    listening_minutes: float = Field(ge=0)
+    distance_from_overall: float = Field(ge=0)
+    is_most_distinct: bool = False
+
+
+class TemperatureMoodTrend(BaseModel):
+    temperature_bucket: str
+    avg_valence: float = Field(ge=0, le=1)
+    avg_energy: float = Field(ge=0, le=1)
+    stream_count: int = Field(ge=0)
+    listening_minutes: float = Field(ge=0)
+    is_highest_valence: bool = False
+    is_highest_energy: bool = False
 
 
 class WeatherCorrelationResponse(BaseModel):
@@ -131,6 +189,13 @@ class WeatherCorrelationResponse(BaseModel):
     summary_by_temperature: list[WeatherSummary]
     summary_by_season: list[WeatherSummary]
     artist_weather_contexts: list[WeatherArtistContext]
+    mood_baseline: WeatherMoodBaseline
+    weather_mood_shifts: list[WeatherMoodShift]
+    weather_mood_heatmap: list[WeatherMoodHeatmapCell]
+    weather_mood_points: list[WeatherMoodPoint]
+    temperature_mood_trends: list[TemperatureMoodTrend]
+    weather_mood_callout: str | None = None
+    temperature_mood_callout: str | None = None
 
 
 class CityOption(BaseModel):

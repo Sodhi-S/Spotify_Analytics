@@ -8,5 +8,7 @@ sources:
       - name: track_tags
       - name: artists
       - name: artist_tags
+      - name: track_image_enrichments
+      - name: artist_image_enrichments
       - name: weather
       - name: track_emotion_features

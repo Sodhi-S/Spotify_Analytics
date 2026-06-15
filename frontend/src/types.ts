@@ -10,11 +10,13 @@ export interface OverviewResponse {
     name: string;
     artist_name: string;
     play_count: number;
+    album_image_url: string | null;
   }[];
   top_artists: {
     artist_id: string;
     name: string;
     play_count: number;
+    image_url: string | null;
   }[];
   top_tags: {
     tag: string;
@@ -37,6 +39,7 @@ export interface TopTracksResponse {
     mood_label: string | null;
     mood_confidence: number | null;
     top_tags: string[];
+    album_image_url: string | null;
   }[];
 }
 
@@ -94,10 +97,65 @@ export interface WeatherSummary {
 export interface WeatherArtistContext {
   artist_id: string;
   name: string;
+  image_url: string | null;
   weather_category: string;
   total_listens: number;
   weather_share: number;
   insight: string;
+}
+
+export interface WeatherMoodBaseline {
+  avg_valence: number | null;
+  avg_energy: number | null;
+  total_listens: number;
+  listening_minutes: number;
+}
+
+export interface WeatherMoodShift {
+  weather_category: string;
+  total_listens: number;
+  listening_minutes: number;
+  avg_valence: number;
+  avg_energy: number;
+  valence_delta: number;
+  energy_delta: number;
+  valence_percent_change: number;
+  energy_percent_change: number;
+  dominant_mood_quadrant: string;
+  top_artist_name: string | null;
+  insight: string;
+  is_strongest_shift: boolean;
+}
+
+export interface WeatherMoodHeatmapCell {
+  weather_category: string;
+  mood_quadrant: string;
+  stream_count: number;
+  listening_minutes: number;
+  percentage: number;
+  is_strongest: boolean;
+}
+
+export interface WeatherMoodPoint {
+  weather_category: string;
+  avg_valence: number;
+  avg_energy: number;
+  dominant_mood_quadrant: string;
+  top_artist_name: string | null;
+  stream_count: number;
+  listening_minutes: number;
+  distance_from_overall: number;
+  is_most_distinct: boolean;
+}
+
+export interface TemperatureMoodTrend {
+  temperature_bucket: string;
+  avg_valence: number;
+  avg_energy: number;
+  stream_count: number;
+  listening_minutes: number;
+  is_highest_valence: boolean;
+  is_highest_energy: boolean;
 }
 
 export interface WeatherCorrelationResponse {
@@ -127,6 +185,13 @@ export interface WeatherCorrelationResponse {
   summary_by_temperature: WeatherSummary[];
   summary_by_season: WeatherSummary[];
   artist_weather_contexts: WeatherArtistContext[];
+  mood_baseline: WeatherMoodBaseline;
+  weather_mood_shifts: WeatherMoodShift[];
+  weather_mood_heatmap: WeatherMoodHeatmapCell[];
+  weather_mood_points: WeatherMoodPoint[];
+  temperature_mood_trends: TemperatureMoodTrend[];
+  weather_mood_callout: string | null;
+  temperature_mood_callout: string | null;
 }
 
 export interface AppSettings {

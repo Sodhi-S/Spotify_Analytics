@@ -44,6 +44,18 @@ emotion_features as (
         classified_at
     from {{ source('raw', 'track_emotion_features') }}
     where error_message is null
+),
+
+track_images as (
+    select
+        track_id,
+        album_image_url,
+        album_image_source,
+        album_image_width,
+        album_image_height,
+        album_image_updated_at
+    from {{ source('raw', 'track_image_enrichments') }}
+    where album_image_url is not null
 )
 
 select
@@ -54,6 +66,11 @@ select
     tracks.album,
     tracks.top_tags,
     existing.preview_url,
+    track_images.album_image_url,
+    track_images.album_image_source,
+    track_images.album_image_width,
+    track_images.album_image_height,
+    track_images.album_image_updated_at,
     coalesce(emotion_features.mood_label, existing.mood_label) as mood_label,
     existing.mood_confidence,
     emotion_features.valence,
@@ -65,3 +82,4 @@ select
 from tracks
 left join existing on tracks.track_id = existing.track_id
 left join emotion_features on tracks.track_id = emotion_features.track_id
+left join track_images on tracks.track_id = track_images.track_id

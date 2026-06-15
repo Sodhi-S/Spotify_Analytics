@@ -35,6 +35,7 @@ TAG_FEATURES: tuple[tuple[tuple[str, ...], tuple[float, float]], ...] = (
 class ArtistAccumulator:
     artist_id: str
     name: str
+    image_url: str | None = None
     play_count: int = 0
     total_ms_played: int = 0
     weighted_valence: float = 0
@@ -156,6 +157,7 @@ class ArtistMoodFingerprintService:
                 select
                     fl.artist_id,
                     coalesce(da.name, dt.artist_name, 'Unknown Artist') as artist_name,
+                    da.image_url,
                     da.genres as artist_genres,
                     dt.valence,
                     dt.energy,
@@ -174,6 +176,7 @@ class ArtistMoodFingerprintService:
                     fl.artist_id,
                     da.name,
                     dt.artist_name,
+                    da.image_url,
                     da.genres,
                     dt.valence,
                     dt.energy,
@@ -193,6 +196,7 @@ class ArtistMoodFingerprintService:
                 artists[artist_id] = ArtistAccumulator(
                     artist_id=artist_id,
                     name=item["artist_name"],
+                    image_url=item["image_url"],
                 )
             artist = artists[artist_id]
             play_count = int(item["play_count"] or 0)
@@ -227,7 +231,7 @@ class ArtistMoodFingerprintService:
                     "rank": index,
                     "artist_id": artist.artist_id,
                     "name": artist.name,
-                    "image_url": None,
+                    "image_url": artist.image_url,
                     "mood_label": label,
                     "avg_valence": avg_valence,
                     "avg_energy": avg_energy,

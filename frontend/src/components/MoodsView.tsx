@@ -20,6 +20,7 @@ import type {
 } from "../types";
 import { MoodDonutChart } from "./MoodDonutChart";
 import { AnimatedNumber } from "./AnimatedNumber";
+import { ImageThumbnail } from "./ImageThumbnail";
 import { PeriodSelector } from "./PeriodSelector";
 
 interface MoodsViewProps {
@@ -74,6 +75,11 @@ function MoodMapTooltip({ active, payload }: MoodTooltipProps) {
   const artist = payload[0].payload;
   return (
     <div className="chart-tooltip">
+      <ImageThumbnail
+        src={artist.image_url}
+        className="tooltip-artist-image"
+        alt=""
+      />
       <strong>{artist.name}</strong>
       <span>{artist.mood_label}</span>
       <span>
@@ -89,7 +95,11 @@ function FingerprintCard({ artist, index }: { artist: ArtistMoodFingerprint; ind
   return (
     <article className="fingerprint-card" style={{ "--row-index": index } as CSSProperties}>
       <div className="fingerprint-card-top">
-        <div className="artist-avatar" aria-hidden="true" />
+        <ImageThumbnail
+          src={artist.image_url}
+          className="artist-avatar"
+          alt=""
+        />
         <div>
           <span>#{artist.rank}</span>
           <strong>{artist.name}</strong>

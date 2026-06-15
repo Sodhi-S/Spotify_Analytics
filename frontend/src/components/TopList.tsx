@@ -1,12 +1,15 @@
 import type { CSSProperties } from "react";
 import { formatCount } from "../privacy";
 import { AnimatedNumber } from "./AnimatedNumber";
+import { ImageThumbnail } from "./ImageThumbnail";
 
 interface TopListItem {
   id: string;
   name: string;
   subtitle?: string;
   count: number;
+  imageUrl?: string | null;
+  imageKind?: "album" | "artist";
 }
 
 interface TopListProps {
@@ -35,7 +38,16 @@ export function TopList({
         <ol className={variant === "media" ? "top-list top-list-media" : "top-list"}>
           {items.map((item, index) => (
             <li key={item.id} style={{ "--row-index": index } as CSSProperties}>
-              {variant === "media" ? <div className="top-list-artwork" aria-hidden="true" /> : null}
+              {variant === "media" ? (
+                <ImageThumbnail
+                  src={item.imageUrl}
+                  className={
+                    item.imageKind === "artist"
+                      ? "top-list-artwork top-list-artist-image"
+                      : "top-list-artwork"
+                  }
+                />
+              ) : null}
               <div className="top-list-copy">
                 <span>{item.name}</span>
                 {item.subtitle ? <small>{item.subtitle}</small> : null}

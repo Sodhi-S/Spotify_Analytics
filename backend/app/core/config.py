@@ -34,6 +34,9 @@ class Settings:
     music2emo_preview_limit: int
     music2emo_inference_limit: int
     music2emo_run_after_ingest: bool
+    image_enrichment_track_limit: int
+    image_enrichment_artist_limit: int
+    image_enrichment_run_after_ingest: bool
     dbt_executable: str
 
 
@@ -66,6 +69,13 @@ def get_settings() -> Settings:
         music2emo_preview_limit=int(os.getenv("MUSIC2EMO_PREVIEW_LIMIT", "100")),
         music2emo_inference_limit=int(os.getenv("MUSIC2EMO_INFERENCE_LIMIT", "25")),
         music2emo_run_after_ingest=os.getenv("MUSIC2EMO_RUN_AFTER_INGEST", "true").lower()
+        in {"1", "true", "yes", "on"},
+        image_enrichment_track_limit=int(os.getenv("IMAGE_ENRICHMENT_TRACK_LIMIT", "100")),
+        image_enrichment_artist_limit=int(os.getenv("IMAGE_ENRICHMENT_ARTIST_LIMIT", "100")),
+        image_enrichment_run_after_ingest=os.getenv(
+            "IMAGE_ENRICHMENT_RUN_AFTER_INGEST",
+            "true",
+        ).lower()
         in {"1", "true", "yes", "on"},
         dbt_executable=os.getenv("DBT_EXECUTABLE", "dbt"),
     )

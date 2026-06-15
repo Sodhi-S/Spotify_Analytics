@@ -46,7 +46,8 @@ class TopTracksService:
                 coalesce(sum(fl.ms_played), 0) as total_ms_played,
                 dt.mood_label,
                 dt.mood_confidence,
-                dt.top_tags
+                dt.top_tags,
+                dt.album_image_url
             from {qualified_table("fact_listens")} fl
             left join {qualified_table("dim_tracks")} dt on fl.track_id = dt.track_id
             left join {qualified_table("dim_artists")} da
@@ -60,7 +61,8 @@ class TopTracksService:
                 dt.album,
                 dt.mood_label,
                 dt.mood_confidence,
-                dt.top_tags
+                dt.top_tags,
+                dt.album_image_url
             order by play_count desc, name asc, artist_name asc
             limit :limit
             """

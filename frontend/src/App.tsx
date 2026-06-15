@@ -52,6 +52,8 @@ function App() {
         name: track.name,
         subtitle: track.artist_name,
         count: track.play_count,
+        imageUrl: track.album_image_url,
+        imageKind: "album" as const,
       })) ?? [],
     [overview],
   );
@@ -62,6 +64,8 @@ function App() {
         id: artist.artist_id,
         name: artist.name,
         count: artist.play_count,
+        imageUrl: artist.image_url,
+        imageKind: "artist" as const,
       })) ?? [],
     [overview],
   );
@@ -107,14 +111,16 @@ function App() {
         >
           Weather
         </button>
-        <button
-          type="button"
-          className={view === "settings" ? "active" : ""}
-          onClick={() => setView("settings")}
-        >
-          Settings
-        </button>
       </nav>
+      <button
+        type="button"
+        className={view === "settings" ? "settings-corner-button active" : "settings-corner-button"}
+        aria-label="Settings"
+        title="Settings"
+        onClick={() => setView("settings")}
+      >
+        ⚙
+      </button>
 
       {view === "overview" ? (
         <>

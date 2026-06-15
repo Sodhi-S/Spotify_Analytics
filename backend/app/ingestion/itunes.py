@@ -80,7 +80,7 @@ class ITunesClient:
         if not isinstance(results, list):
             return None
         for result in results:
-            if str(result.get("wrapperType")) == "track" and result.get("previewUrl"):
+            if str(result.get("wrapperType")) == "track":
                 return result
         return None
 
@@ -141,6 +141,53 @@ class ITunesClient:
                     best_result = result
 
         if best_result is None or best_score < 0.72:
+            return None
+        best_result["_match_score"] = round(best_score, 3)
+        return best_result
+
+    def get_album_artwork_from_apple_music_url(self, apple_music_url: str) -> dict[str, Any] | None:
+        track_id = apple_music_track_id(apple_music_url)
+        if track_id is None:
+            return None
+        result = self.lookup(track_id)
+        if result is None or not result.get("artworkUrl100"):
+            return None
+        return result
+
+    def get_best_artwork_match(
+        self,
+        artist_name: str,
+        track_name: str,
+        album_name: str | None = None,
+    ) -> dict[str, Any] | None:
+        best_result: dict[str, Any] | None = None
+        best_score = 0.0
+
+        queries = self._queries(artist_name, f"{track_name} {album_name or ''}".strip())
+        for query in queries:
+            for result in self.search(query):
+                if not result.get("artworkUrl100"):
+                    continue
+
+                returned_artist = str(result.get("artistName", ""))
+                returned_track = str(result.get("trackName", ""))
+                returned_album = str(result.get("collectionName", ""))
+                artist_score = _ratio(artist_name, returned_artist)
+                track_score = max(_ratio(track_name, returned_track), _ratio(_clean_title(track_name), returned_track))
+                album_score = _ratio(album_name or "", returned_album) if album_name else 0.0
+
+                if artist_score < 0.82 or track_score < 0.78:
+                    continue
+
+                score = (artist_score * 0.44) + (track_score * 0.46)
+                if album_name:
+                    score += album_score * 0.10
+
+                if score > best_score:
+                    best_score = score
+                    best_result = result
+
+        if best_result is None or best_score < 0.80:
             return None
         best_result["_match_score"] = round(best_score, 3)
         return best_result

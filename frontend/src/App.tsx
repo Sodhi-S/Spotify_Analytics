@@ -11,12 +11,65 @@ import type { OverviewResponse, Period } from "./types";
 
 type View = "overview" | "top-tracks" | "moods" | "weather" | "settings";
 
+const VIEW_PATHS: Record<View, string> = {
+  overview: "/overview",
+  "top-tracks": "/top-tracks",
+  moods: "/moods",
+  weather: "/weather",
+  settings: "/settings",
+};
+
+function viewFromPath(pathname: string): View {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  if (path === "/top-tracks") {
+    return "top-tracks";
+  }
+  if (path === "/moods") {
+    return "moods";
+  }
+  if (path === "/weather") {
+    return "weather";
+  }
+  if (path === "/settings") {
+    return "settings";
+  }
+  return "overview";
+}
+
 function App() {
-  const [view, setView] = useState<View>("overview");
+  const [view, setView] = useState<View>(() => viewFromPath(window.location.pathname));
   const [period, setPeriod] = useState<Period>("30d");
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const navigateToPath = (path: string, replace = false) => {
+    if (window.location.pathname === path) {
+      return;
+    }
+    if (replace) {
+      window.history.replaceState(null, "", path);
+      return;
+    }
+    window.history.pushState(null, "", path);
+  };
+
+  const navigateToView = (nextView: View, replace = false) => {
+    setView(nextView);
+    navigateToPath(VIEW_PATHS[nextView], replace);
+  };
+
+  useEffect(() => {
+    navigateToView(view, true);
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setView(viewFromPath(window.location.pathname));
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,28 +139,28 @@ function App() {
         <button
           type="button"
           className={view === "overview" ? "active" : ""}
-          onClick={() => setView("overview")}
+          onClick={() => navigateToView("overview")}
         >
           Overview
         </button>
         <button
           type="button"
           className={view === "top-tracks" ? "active" : ""}
-          onClick={() => setView("top-tracks")}
+          onClick={() => navigateToView("top-tracks")}
         >
           Top Tracks
         </button>
         <button
           type="button"
           className={view === "moods" ? "active" : ""}
-          onClick={() => setView("moods")}
+          onClick={() => navigateToView("moods")}
         >
           Moods
         </button>
         <button
           type="button"
           className={view === "weather" ? "active" : ""}
-          onClick={() => setView("weather")}
+          onClick={() => navigateToView("weather")}
         >
           Weather
         </button>
@@ -117,7 +170,7 @@ function App() {
         className={view === "settings" ? "settings-corner-button active" : "settings-corner-button"}
         aria-label="Settings"
         title="Settings"
-        onClick={() => setView("settings")}
+        onClick={() => navigateToView("settings")}
       >
         ⚙
       </button>

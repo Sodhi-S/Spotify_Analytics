@@ -11,6 +11,7 @@ from app.ingestion.rate_limiter import RateLimiter
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
 ITUNES_LOOKUP_URL = "https://itunes.apple.com/lookup"
 APPLE_MUSIC_ID_PATTERN = re.compile(r"/(?:song|album)/[^/?#]+/(\d+)")
+ARTWORK_SIZE_PATTERN = re.compile(r"\d+x\d+bb")
 
 FEATURE_PATTERN = re.compile(
     r"\s*[\(\[]\s*(feat\.?|featuring|ft\.?|with)\s+[^)\]]+[\)\]]",
@@ -112,6 +113,38 @@ class ITunesClient:
                 deduped.append(query)
         return deduped
 
+    def _artwork_queries(
+        self,
+        artist_name: str,
+        track_name: str,
+        album_name: str | None = None,
+    ) -> list[str]:
+        clean_track = _clean_title(track_name)
+        queries = [
+            f"{artist_name} {track_name}",
+            f"{artist_name} {clean_track}",
+            f"{clean_track} {artist_name}",
+            track_name,
+            clean_track,
+        ]
+        if album_name:
+            queries = [
+                f"{artist_name} {track_name} {album_name}",
+                f"{artist_name} {clean_track} {album_name}",
+                f"{track_name} {album_name} {artist_name}",
+                *queries,
+                f"{artist_name} {album_name}",
+            ]
+
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for query in queries:
+            key = query.lower().strip()
+            if key and key not in seen:
+                seen.add(key)
+                deduped.append(query)
+        return deduped
+
     def get_preview_url(self, artist_name: str, track_name: str) -> str | None:
         match = self.get_best_match(artist_name, track_name)
         if match is None:
@@ -119,14 +152,19 @@ class ITunesClient:
         preview_url = match.get("previewUrl")
         return str(preview_url) if preview_url else None
 
-    def get_best_match(self, artist_name: str, track_name: str) -> dict[str, Any] | None:
+    def get_best_match(
+        self,
+        artist_name: str,
+        track_name: str,
+        require_preview: bool = True,
+    ) -> dict[str, Any] | None:
         best_result: dict[str, Any] | None = None
         best_score = 0.0
 
         for query in self._queries(artist_name, track_name):
             for result in self.search(query):
                 preview_url = result.get("previewUrl")
-                if not preview_url:
+                if require_preview and not preview_url:
                     continue
 
                 returned_artist = str(result.get("artistName", ""))
@@ -163,8 +201,10 @@ class ITunesClient:
         best_result: dict[str, Any] | None = None
         best_score = 0.0
 
-        queries = self._queries(artist_name, f"{track_name} {album_name or ''}".strip())
-        for query in queries:
+        best_relaxed_result: dict[str, Any] | None = None
+        best_relaxed_score = 0.0
+
+        for query in self._artwork_queries(artist_name, track_name, album_name):
             for result in self.search(query):
                 if not result.get("artworkUrl100"):
                     continue
@@ -177,6 +217,11 @@ class ITunesClient:
                 album_score = _ratio(album_name or "", returned_album) if album_name else 0.0
 
                 if artist_score < 0.82 or track_score < 0.78:
+                    relaxed_score = (artist_score * 0.48) + (track_score * 0.52)
+                    if artist_score >= 0.76 and track_score >= 0.70 and relaxed_score >= 0.74:
+                        if relaxed_score > best_relaxed_score:
+                            best_relaxed_score = relaxed_score
+                            best_relaxed_result = result
                     continue
 
                 score = (artist_score * 0.44) + (track_score * 0.46)
@@ -188,13 +233,26 @@ class ITunesClient:
                     best_result = result
 
         if best_result is None or best_score < 0.80:
-            return None
+            if best_relaxed_result is None:
+                return None
+            best_relaxed_result["_match_score"] = round(best_relaxed_score, 3)
+            best_relaxed_result["_match_mode"] = "relaxed_artwork"
+            return best_relaxed_result
         best_result["_match_score"] = round(best_score, 3)
+        best_result["_match_mode"] = "strict_artwork"
         return best_result
 
 
 def search_url_for_display(artist_name: str, track_name: str) -> str:
     return f"{ITUNES_SEARCH_URL}?term={quote_plus(f'{artist_name} {track_name}')}&entity=song"
+
+
+def sized_itunes_artwork_url(value: Any, size: int = 600) -> str | None:
+    if not value:
+        return None
+    url = str(value)
+    sized = ARTWORK_SIZE_PATTERN.sub(f"{size}x{size}bb", url)
+    return sized or url
 
 
 def apple_music_track_id(apple_music_url: str) -> str | None:

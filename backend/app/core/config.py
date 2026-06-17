@@ -37,6 +37,7 @@ class Settings:
     image_enrichment_track_limit: int
     image_enrichment_artist_limit: int
     image_enrichment_run_after_ingest: bool
+    image_enrichment_artist_album_fallback: bool
     dbt_executable: str
 
 
@@ -75,6 +76,11 @@ def get_settings() -> Settings:
         image_enrichment_run_after_ingest=os.getenv(
             "IMAGE_ENRICHMENT_RUN_AFTER_INGEST",
             "true",
+        ).lower()
+        in {"1", "true", "yes", "on"},
+        image_enrichment_artist_album_fallback=os.getenv(
+            "IMAGE_ENRICHMENT_ARTIST_ALBUM_FALLBACK",
+            "false",
         ).lower()
         in {"1", "true", "yes", "on"},
         dbt_executable=os.getenv("DBT_EXECUTABLE", "dbt"),

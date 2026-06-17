@@ -8,6 +8,7 @@ from typing import Any
 
 from app.core.config import ROOT_DIR, get_settings
 from app.db import db_connection
+from app.ingestion.deezer import DeezerClient
 from app.ingestion.itunes import ITunesClient
 from app.ingestion.lastfm import LastFmClient, normalize_artist_info
 from app.ingestion.loader import RawLoader
@@ -56,11 +57,7 @@ def _lastfm_payload_artist(payload: Any) -> dict[str, Any] | None:
     return artist if isinstance(artist, dict) else None
 
 
-def _lastfm_artist_image(payload: Any) -> tuple[str, int | None, int | None] | None:
-    artist = _lastfm_payload_artist(payload)
-    if artist is None:
-        return None
-    images = artist.get("image")
+def _best_lastfm_image(images: Any) -> tuple[str, int | None, int | None] | None:
     if not isinstance(images, list):
         return None
 
@@ -89,6 +86,19 @@ def _lastfm_artist_image(payload: Any) -> tuple[str, int | None, int | None] | N
     if size == "small":
         return url, 34, 34
     return url, None, None
+
+
+def _lastfm_track_image(payload: Any) -> tuple[str, int | None, int | None] | None:
+    if not isinstance(payload, dict):
+        return None
+    return _best_lastfm_image(payload.get("image"))
+
+
+def _lastfm_artist_image(payload: Any) -> tuple[str, int | None, int | None] | None:
+    artist = _lastfm_payload_artist(payload)
+    if artist is None:
+        return None
+    return _best_lastfm_image(artist.get("image"))
 
 
 def _lastfm_artist_name(payload: Any) -> str | None:
@@ -124,6 +134,20 @@ def enrich_track_images(
         ):
             inspected += 1
             try:
+                lastfm_image = _lastfm_track_image(track.get("raw_payload"))
+                if lastfm_image is not None:
+                    image_url, width, height = lastfm_image
+                    loader.upsert_track_image(
+                        track_id=track["track_id"],
+                        image_url=image_url,
+                        source="lastfm_recent_track",
+                        width=width,
+                        height=height,
+                        raw_payload=track.get("raw_payload") if isinstance(track.get("raw_payload"), dict) else dict(track),
+                    )
+                    found += 1
+                    continue
+
                 result = client.get_best_artwork_match(
                     track["artist_name"],
                     track["track_name"],
@@ -204,6 +228,7 @@ def enrich_artist_images(
     found = 0
     unresolved = 0
     client = LastFmClient() if _can_request_lastfm() else None
+    deezer_client = DeezerClient()
 
     with db_connection() as connection:
         loader = RawLoader(connection)
@@ -217,21 +242,25 @@ def enrich_artist_images(
             try:
                 payload = _artist_payload_for_target(loader, client, target)
                 returned_name = _lastfm_artist_name(payload)
-                if returned_name and _ratio(target["artist_name"], returned_name) < 0.88:
-                    loader.upsert_artist_image(
-                        artist_id=target["artist_id"],
-                        image_url=None,
-                        source=None,
-                        width=None,
-                        height=None,
-                        raw_payload=payload if isinstance(payload, dict) else dict(target),
-                        unresolved_reason="Last.fm artist match was ambiguous.",
-                    )
-                    unresolved += 1
-                    continue
-
-                image = _lastfm_artist_image(payload)
+                lastfm_match_is_ambiguous = bool(
+                    returned_name and _ratio(target["artist_name"], returned_name) < 0.88
+                )
+                image = None if lastfm_match_is_ambiguous else _lastfm_artist_image(payload)
                 if image is None:
+                    deezer_match = deezer_client.get_best_artist_image(target["artist_name"])
+                    if deezer_match is not None:
+                        image_url = str(deezer_match["_selected_image_url"])
+                        loader.upsert_artist_image(
+                            artist_id=target["artist_id"],
+                            image_url=image_url,
+                            source="deezer",
+                            width=1000 if "1000x1000" in image_url else None,
+                            height=1000 if "1000x1000" in image_url else None,
+                            raw_payload=deezer_match,
+                        )
+                        found += 1
+                        continue
+
                     fallback = _artist_album_fallback(loader, target) if use_album_fallback else None
                     if fallback is not None:
                         image_url, width, height, raw_payload = fallback
@@ -246,6 +275,11 @@ def enrich_artist_images(
                         found += 1
                         continue
 
+                    unresolved_reason = (
+                        "Last.fm artist match was ambiguous and no Deezer artist image found."
+                        if lastfm_match_is_ambiguous
+                        else "No Last.fm or Deezer artist image found."
+                    )
                     loader.upsert_artist_image(
                         artist_id=target["artist_id"],
                         image_url=None,
@@ -253,7 +287,7 @@ def enrich_artist_images(
                         width=None,
                         height=None,
                         raw_payload=payload if isinstance(payload, dict) else dict(target),
-                        unresolved_reason="No Last.fm artist image found.",
+                        unresolved_reason=unresolved_reason,
                     )
                     unresolved += 1
                     continue
@@ -308,6 +342,8 @@ def run_all_image_enrichment(
     retry_unresolved: bool = False,
     use_album_fallback: bool = True,
     max_batches: int = 0,
+    include_tracks: bool = True,
+    include_artists: bool = True,
 ) -> dict[str, Any]:
     totals = {
         "track_images": {"inspected": 0, "found": 0, "unresolved": 0},
@@ -318,17 +354,18 @@ def run_all_image_enrichment(
     with db_connection() as connection:
         loader = RawLoader(connection)
         loader.ensure_image_enrichment_tables()
-        total_targets = (
-            loader.count_track_image_targets(refresh=refresh, retry_unresolved=retry_unresolved)
-            + loader.count_artist_image_targets(refresh=refresh, retry_unresolved=retry_unresolved)
-        )
+        total_targets = 0
+        if include_tracks:
+            total_targets += loader.count_track_image_targets(refresh=refresh, retry_unresolved=retry_unresolved)
+        if include_artists:
+            total_targets += loader.count_artist_image_targets(refresh=refresh, retry_unresolved=retry_unresolved)
 
     while True:
         batches += 1
         result = run_image_enrichment(
-            track_limit=batch_size,
-            artist_limit=batch_size,
-            refresh=refresh and batches == 1,
+            track_limit=batch_size if include_tracks else 0,
+            artist_limit=batch_size if include_artists else 0,
+            refresh=refresh,
             retry_unresolved=retry_unresolved,
             use_album_fallback=use_album_fallback,
         )
@@ -370,8 +407,8 @@ def rebuild_image_models() -> dict[str, object]:
         "--profiles-dir",
         ".",
         "--select",
-        "dim_tracks",
-        "dim_artists",
+        "+dim_tracks",
+        "+dim_artists",
     ]
     result = subprocess.run(
         command,

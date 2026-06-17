@@ -201,12 +201,22 @@ class RawLoader:
                     tracks.track_id,
                     tracks.name as track_name,
                     tracks.artist_name,
-                    tracks.album
+                    tracks.album,
+                    raw_track.raw_payload
                 from {qualified_table("dim_tracks")} tracks
                 left join raw.track_image_enrichments images
                     on tracks.track_id = images.track_id
+                left join lateral (
+                    select recent.raw_payload
+                    from raw.recent_tracks recent
+                    where lower(recent.track_name) = lower(tracks.name)
+                      and lower(recent.artist_name) = lower(tracks.artist_name)
+                      and recent.raw_payload ? 'image'
+                    order by recent.played_at desc
+                    limit 1
+                ) raw_track on true
                 {image_filter}
-                order by tracks.artist_name, tracks.name
+                order by images.attempted_at asc nulls first, tracks.artist_name, tracks.name
                 limit :limit
                 """
             ),
@@ -258,11 +268,16 @@ class RawLoader:
                 from {qualified_table("dim_artists")} artists
                 left join raw.artist_image_enrichments images
                     on artists.artist_id = images.artist_id
-                left join raw.artists raw_artists
-                    on lower(artists.name) = lower(raw_artists.artist_name)
+                left join lateral (
+                    select raw_artist.raw_payload
+                    from raw.artists raw_artist
+                    where lower(artists.name) = lower(raw_artist.artist_name)
+                    order by raw_artist.fetched_at desc
+                    limit 1
+                ) raw_artists on true
                 {image_filter}
                   {"where" if refresh else "and"} artists.is_current = true
-                order by artists.name
+                order by images.attempted_at asc nulls first, artists.name
                 limit :limit
                 """
             ),

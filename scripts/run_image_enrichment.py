@@ -29,13 +29,33 @@ def main() -> None:
         help="Retry targets that were previously attempted but unresolved.",
     )
     parser.add_argument("--refresh", action="store_true")
-    parser.add_argument(
+    fallback_group = parser.add_mutually_exclusive_group()
+    fallback_group.add_argument(
+        "--artist-album-fallback",
+        action="store_true",
+        default=settings.image_enrichment_artist_album_fallback,
+        help="Use representative album artwork when no artist photo is available.",
+    )
+    fallback_group.add_argument(
         "--no-artist-album-fallback",
         action="store_true",
         help="Do not use representative album artwork when no artist photo is available.",
     )
+    parser.add_argument(
+        "--tracks-only",
+        action="store_true",
+        help="Only enrich track album artwork. Skips artist image lookups.",
+    )
+    parser.add_argument(
+        "--artists-only",
+        action="store_true",
+        help="Only enrich artist images. Skips track album artwork.",
+    )
     parser.add_argument("--skip-dbt", action="store_true")
     args = parser.parse_args()
+    if args.tracks_only and args.artists_only:
+        parser.error("--tracks-only and --artists-only cannot be used together.")
+    use_album_fallback = args.artist_album_fallback and not args.no_artist_album_fallback
 
     print("Running image enrichment...")
     if args.all:
@@ -44,18 +64,20 @@ def main() -> None:
                 batch_size=args.batch_size,
                 refresh=args.refresh,
                 retry_unresolved=args.retry_unresolved,
-                use_album_fallback=not args.no_artist_album_fallback,
+                use_album_fallback=use_album_fallback,
                 max_batches=args.max_batches,
+                include_tracks=not args.artists_only,
+                include_artists=not args.tracks_only,
             )
         )
     else:
         print(
             run_image_enrichment(
-                track_limit=args.track_limit,
-                artist_limit=args.artist_limit,
+                track_limit=0 if args.artists_only else args.track_limit,
+                artist_limit=0 if args.tracks_only else args.artist_limit,
                 refresh=args.refresh,
                 retry_unresolved=args.retry_unresolved,
-                use_album_fallback=not args.no_artist_album_fallback,
+                use_album_fallback=use_album_fallback,
             )
         )
 

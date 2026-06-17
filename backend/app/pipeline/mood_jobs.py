@@ -12,7 +12,7 @@ from sqlalchemy import text
 from app.core.alerts import send_slack_alert
 from app.core.config import get_settings
 from app.db import db_connection, qualified_table
-from app.ingestion.itunes import ITunesClient
+from app.ingestion.itunes import ITunesClient, sized_itunes_artwork_url
 from app.ingestion.loader import RawLoader
 
 
@@ -45,9 +45,12 @@ def find_unclassified_tracks(limit: int = 250) -> dict[str, int]:
 def fetch_itunes_previews(limit: int = 100) -> dict[str, int]:
     client = ITunesClient()
     found = 0
+    artwork_found = 0
     inspected = 0
 
     with db_connection() as connection:
+        loader = RawLoader(connection)
+        loader.ensure_image_enrichment_tables()
         rows = connection.execute(
             text(
                 f"""
@@ -65,7 +68,24 @@ def fetch_itunes_previews(limit: int = 100) -> dict[str, int]:
             inspected += 1
             track = row._mapping
             try:
-                preview_url = client.get_preview_url(track["artist_name"], track["name"])
+                match = client.get_best_match(
+                    track["artist_name"],
+                    track["name"],
+                    require_preview=False,
+                )
+                preview_url = str(match.get("previewUrl")) if match and match.get("previewUrl") else None
+                artwork_url = sized_itunes_artwork_url(match.get("artworkUrl100") if match else None)
+                if artwork_url:
+                    loader.upsert_track_image(
+                        track_id=track["track_id"],
+                        image_url=artwork_url,
+                        source="itunes_preview_lookup",
+                        width=600,
+                        height=600,
+                        raw_payload=match,
+                    )
+                    artwork_found += 1
+
                 if preview_url:
                     connection.execute(
                         text(
@@ -79,9 +99,9 @@ def fetch_itunes_previews(limit: int = 100) -> dict[str, int]:
                     )
                     found += 1
             except Exception as exc:  # noqa: BLE001
-                RawLoader(connection).insert_failed("itunes_preview", dict(track), str(exc))
+                loader.insert_failed("itunes_preview", dict(track), str(exc))
 
-    return {"inspected": inspected, "found": found}
+    return {"inspected": inspected, "found": found, "artwork_found": artwork_found}
 
 
 def download_preview(preview_url: str) -> Path:

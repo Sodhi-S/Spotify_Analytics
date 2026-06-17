@@ -24,6 +24,7 @@ import type {
   WeatherSummary,
 } from "../types";
 import { AnimatedNumber } from "./AnimatedNumber";
+import { pageCount, pageItems, PaginationControls } from "./PaginationControls";
 import { PeriodSelector } from "./PeriodSelector";
 import { StatCard } from "./StatCard";
 
@@ -255,39 +256,49 @@ function WeatherSummaryCard({
 function WeatherSummaryPreview({
   title,
   summaries,
-  onSeeMore,
 }: {
   title: string;
   summaries: WeatherSummary[];
-  onSeeMore: () => void;
 }) {
+  const [page, setPage] = useState(1);
+  const pageSize = 2;
+  const safePage = Math.min(page, pageCount(summaries.length, pageSize));
+  const visibleSummaries = pageItems(summaries, safePage, pageSize);
   const maxListens = hideRealNumbers
     ? 1
     : Math.max(...summaries.map((item) => item.total_listens), 1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [summaries]);
 
   return (
     <section className="panel weather-summary-panel weather-summary-preview-panel">
       <div className="panel-heading">
         <h2>{title}</h2>
-        {summaries.length > 2 ? (
-          <button type="button" className="weather-summary-more-button" onClick={onSeeMore}>
-            See more
-          </button>
-        ) : null}
       </div>
       {summaries.length === 0 ? (
         <p className="empty-state">No weather data yet</p>
       ) : (
-        <div className="weather-summary-list">
-          {summaries.slice(0, 2).map((summary, index) => (
-            <WeatherSummaryCard
-              summary={summary}
-              index={index}
-              maxListens={maxListens}
-              key={summary.label}
-            />
-          ))}
-        </div>
+        <>
+          <div className="weather-summary-list">
+            {visibleSummaries.map((summary, index) => (
+              <WeatherSummaryCard
+                summary={summary}
+                index={index}
+                maxListens={maxListens}
+                key={summary.label}
+              />
+            ))}
+          </div>
+          <PaginationControls
+            page={safePage}
+            pageSize={pageSize}
+            totalItems={summaries.length}
+            onPageChange={setPage}
+            label={`${title} pages`}
+          />
+        </>
       )}
     </section>
   );
@@ -298,7 +309,9 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [heatmapMode, setHeatmapMode] = useState<HeatmapMode>("percentage");
-  const [isWeatherSummaryModalOpen, setIsWeatherSummaryModalOpen] = useState(false);
+  const [heatmapPage, setHeatmapPage] = useState(1);
+  const [temperaturePage, setTemperaturePage] = useState(1);
+  const [weatherSummaryPage, setWeatherSummaryPage] = useState(1);
   const [xDomain, setXDomain] = useState<MoodDomain>(DEFAULT_DOMAIN);
   const [yDomain, setYDomain] = useState<MoodDomain>(DEFAULT_DOMAIN);
 
@@ -308,6 +321,9 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
     setError(null);
     setXDomain(DEFAULT_DOMAIN);
     setYDomain(DEFAULT_DOMAIN);
+    setHeatmapPage(1);
+    setTemperaturePage(1);
+    setWeatherSummaryPage(1);
 
     fetchWeatherCorrelation(period)
       .then((response) => {
@@ -333,21 +349,6 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
       cancelled = true;
     };
   }, [period]);
-
-  useEffect(() => {
-    if (!isWeatherSummaryModalOpen) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsWeatherSummaryModalOpen(false);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isWeatherSummaryModalOpen]);
 
   const totals = useMemo(() => {
     const daily = data?.daily_data ?? [];
@@ -416,6 +417,32 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
       }),
     }));
   }, [data, heatmapMode]);
+
+  const heatmapPageSize = 4;
+  const safeHeatmapPage = Math.min(heatmapPage, pageCount(heatmapRows.length, heatmapPageSize));
+  const visibleHeatmapRows = pageItems(heatmapRows, safeHeatmapPage, heatmapPageSize);
+  const temperatureTrends = data?.temperature_mood_trends ?? [];
+  const temperaturePageSize = 5;
+  const safeTemperaturePage = Math.min(
+    temperaturePage,
+    pageCount(temperatureTrends.length, temperaturePageSize),
+  );
+  const visibleTemperatureTrends = pageItems(
+    temperatureTrends,
+    safeTemperaturePage,
+    temperaturePageSize,
+  );
+  const weatherSummaries = data?.summary_by_weather ?? [];
+  const weatherSummaryPageSize = 4;
+  const safeWeatherSummaryPage = Math.min(
+    weatherSummaryPage,
+    pageCount(weatherSummaries.length, weatherSummaryPageSize),
+  );
+  const visibleWeatherSummaries = pageItems(
+    weatherSummaries,
+    safeWeatherSummaryPage,
+    weatherSummaryPageSize,
+  );
 
   const strongestHeatmapCell = data?.weather_mood_heatmap.find((cell) => cell.is_strongest);
   const baselineAvgValence = data?.mood_baseline.avg_valence ?? null;
@@ -573,7 +600,6 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
           <WeatherSummaryPreview
             title="By Weather"
             summaries={data?.summary_by_weather ?? []}
-            onSeeMore={() => setIsWeatherSummaryModalOpen(true)}
           />
         </section>
 
@@ -608,7 +634,7 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
                       <strong key={quadrant}>{quadrant}</strong>
                     ))}
                   </div>
-                  {heatmapRows.map((row) => (
+                  {visibleHeatmapRows.map((row) => (
                     <div className="weather-heatmap-row" key={row.label}>
                       <strong>{row.label}</strong>
                       {row.cells.map(({ quadrant, cell, value, intensity }) => (
@@ -624,6 +650,13 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
                     </div>
                   ))}
                 </div>
+                <PaginationControls
+                  page={safeHeatmapPage}
+                  pageSize={heatmapPageSize}
+                  totalItems={heatmapRows.length}
+                  onPageChange={setHeatmapPage}
+                  label="Weather mood heatmap pages"
+                />
               </>
             ) : (
               <p className="empty-state">No weather mood heatmap yet.</p>
@@ -635,10 +668,10 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
               <h2>Temperature vs Mood</h2>
               <span>{data?.temperature_mood_callout ?? "Valence and energy by bucket"}</span>
             </div>
-            {data?.temperature_mood_trends.length ? (
+            {temperatureTrends.length ? (
               <div className="weather-temperature-chart">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.temperature_mood_trends} margin={{ top: 18, right: 24, bottom: 12, left: 0 }}>
+                  <LineChart data={visibleTemperatureTrends} margin={{ top: 18, right: 24, bottom: 12, left: 0 }}>
                     <CartesianGrid stroke="rgb(255 255 255 / 8%)" />
                     <XAxis
                       dataKey="temperature_bucket"
@@ -675,9 +708,18 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
             ) : (
               <p className="empty-state">No temperature mood trend yet.</p>
             )}
-            {data?.temperature_mood_trends.length ? (
+            {temperatureTrends.length ? (
+              <PaginationControls
+                page={safeTemperaturePage}
+                pageSize={temperaturePageSize}
+                totalItems={temperatureTrends.length}
+                onPageChange={setTemperaturePage}
+                label="Temperature mood pages"
+              />
+            ) : null}
+            {temperatureTrends.length ? (
               <div className="weather-temperature-badges">
-                {data.temperature_mood_trends
+                {temperatureTrends
                   .filter((bucket) => bucket.is_highest_valence || bucket.is_highest_energy)
                   .map((bucket) => (
                     <span key={`${bucket.temperature_bucket}-${bucket.is_highest_valence ? "valence" : "energy"}`}>
@@ -690,46 +732,35 @@ export function WeatherView({ period, onPeriodChange }: WeatherViewProps) {
           </section>
         </section>
 
-        {isWeatherSummaryModalOpen ? (
-          <div
-            className="weather-summary-modal-backdrop"
-            role="presentation"
-            onClick={() => setIsWeatherSummaryModalOpen(false)}
-          >
-            <section
-              className="weather-summary-modal panel"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="weather-summary-modal-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="panel-heading">
-                <h2 id="weather-summary-modal-title">All Weather Types</h2>
-                <button
-                  type="button"
-                  className="weather-summary-more-button"
-                  onClick={() => setIsWeatherSummaryModalOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-              {data?.summary_by_weather.length ? (
-                <div className="weather-summary-modal-grid">
-                  {data.summary_by_weather.map((summary, index) => (
-                    <WeatherSummaryCard
-                      summary={summary}
-                      index={index}
-                      maxListens={weatherSummaryMaxListens}
-                      key={summary.label}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="empty-state">No weather data yet</p>
-              )}
-            </section>
+        <section className="panel weather-summary-panel">
+          <div className="panel-heading">
+            <h2>All Weather Types</h2>
+            <span>{weatherSummaries.length} conditions</span>
           </div>
-        ) : null}
+          {weatherSummaries.length ? (
+            <>
+              <div className="weather-summary-modal-grid">
+                {visibleWeatherSummaries.map((summary, index) => (
+                  <WeatherSummaryCard
+                    summary={summary}
+                    index={index}
+                    maxListens={weatherSummaryMaxListens}
+                    key={summary.label}
+                  />
+                ))}
+              </div>
+              <PaginationControls
+                page={safeWeatherSummaryPage}
+                pageSize={weatherSummaryPageSize}
+                totalItems={weatherSummaries.length}
+                onPageChange={setWeatherSummaryPage}
+                label="All weather type pages"
+              />
+            </>
+          ) : (
+            <p className="empty-state">No weather data yet</p>
+          )}
+        </section>
       </div>
     </>
   );

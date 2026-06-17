@@ -1950,6 +1950,68 @@ select {
   margin-top: 12px;
 }
 
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tracks-table > .pagination-controls,
+.mood-callout-grid > .pagination-controls,
+.fingerprint-grid + .pagination-controls,
+.weather-summary-modal-grid + .pagination-controls,
+.weather-heatmap + .pagination-controls,
+.weather-temperature-chart + .pagination-controls,
+.weather-temperature-panel > .pagination-controls {
+  grid-column: 1 / -1;
+}
+
+.pagination-controls button {
+  min-width: 66px;
+  min-height: 32px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 7px;
+  background: rgb(255 255 255 / 5%);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.pagination-controls button:hover {
+  border-color: rgb(84 245 139 / 40%);
+  color: var(--text-primary);
+}
+
+.pagination-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.pagination-controls span {
+  min-width: 48px;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  text-align: center;
+}
+
+.city-options .pagination-controls {
+  justify-content: center;
+  margin: 8px;
+}
+
+.city-options .pagination-controls button {
+  display: inline-flex;
+  width: auto;
+  min-height: 32px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 7px;
+  padding: 0 10px;
+}
+
 @keyframes pageRiseIn {
   from {
     opacity: 0;

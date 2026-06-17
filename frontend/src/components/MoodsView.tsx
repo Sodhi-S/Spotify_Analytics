@@ -21,7 +21,6 @@ import type {
 import { MoodDonutChart } from "./MoodDonutChart";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { ImageThumbnail } from "./ImageThumbnail";
-import { pageCount, pageItems, PaginationControls } from "./PaginationControls";
 import { PeriodSelector } from "./PeriodSelector";
 
 interface MoodsViewProps {
@@ -156,8 +155,6 @@ export function MoodsView({
   const [fingerprints, setFingerprints] = useState<ArtistMoodFingerprintsResponse | null>(null);
   const [isFingerprintLoading, setIsFingerprintLoading] = useState(true);
   const [fingerprintError, setFingerprintError] = useState<string | null>(null);
-  const [calloutPage, setCalloutPage] = useState(1);
-  const [fingerprintPage, setFingerprintPage] = useState(1);
   const [xDomain, setXDomain] = useState<MoodDomain>(DEFAULT_DOMAIN);
   const [yDomain, setYDomain] = useState<MoodDomain>(DEFAULT_DOMAIN);
 
@@ -165,8 +162,6 @@ export function MoodsView({
     let cancelled = false;
     setIsFingerprintLoading(true);
     setFingerprintError(null);
-    setCalloutPage(1);
-    setFingerprintPage(1);
 
     fetchArtistMoodFingerprints(period)
       .then((response) => {
@@ -203,19 +198,6 @@ export function MoodsView({
 
   const fingerprintArtists = fingerprints?.artists ?? [];
   const callouts = fingerprints?.callouts ?? [];
-  const calloutPageSize = 2;
-  const fingerprintPageSize = 4;
-  const safeCalloutPage = Math.min(calloutPage, pageCount(callouts.length, calloutPageSize));
-  const safeFingerprintPage = Math.min(
-    fingerprintPage,
-    pageCount(fingerprintArtists.length, fingerprintPageSize),
-  );
-  const visibleCallouts = pageItems(callouts, safeCalloutPage, calloutPageSize);
-  const visibleFingerprintArtists = pageItems(
-    fingerprintArtists,
-    safeFingerprintPage,
-    fingerprintPageSize,
-  );
 
   const isZoomed = xDomain[0] !== 0 || xDomain[1] !== 1 || yDomain[0] !== 0 || yDomain[1] !== 1;
 
@@ -254,20 +236,13 @@ export function MoodsView({
 
       <div className={isLoading || isFingerprintLoading ? "content loading" : "content"}>
         <section className="mood-callout-grid">
-          {visibleCallouts.map((callout) => (
+          {callouts.map((callout) => (
             <article className="mood-callout" key={callout.kind}>
               <span>{callout.kind.replace(/_/g, " ")}</span>
               <strong>{callout.artist_name ?? "Pending"}</strong>
               <p>{callout.text}</p>
             </article>
           ))}
-          <PaginationControls
-            page={safeCalloutPage}
-            pageSize={calloutPageSize}
-            totalItems={callouts.length}
-            onPageChange={setCalloutPage}
-            label="Mood callout pages"
-          />
         </section>
 
         <section className="mood-dashboard-grid">
@@ -358,17 +333,10 @@ export function MoodsView({
           {fingerprintArtists.length ? (
             <>
               <div className="fingerprint-grid">
-                {visibleFingerprintArtists.map((artist, index) => (
+                {fingerprintArtists.map((artist, index) => (
                   <FingerprintCard artist={artist} index={index} key={artist.artist_id} />
                 ))}
               </div>
-              <PaginationControls
-                page={safeFingerprintPage}
-                pageSize={fingerprintPageSize}
-                totalItems={fingerprintArtists.length}
-                onPageChange={setFingerprintPage}
-                label="Artist fingerprint pages"
-              />
             </>
           ) : (
             <p className="empty-state">No artist fingerprints yet.</p>

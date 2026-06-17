@@ -5,10 +5,8 @@ import { formatCount, formatDuration } from "../privacy";
 import type { Period, TopTracksResponse } from "../types";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { ImageThumbnail } from "./ImageThumbnail";
-import { pageCount, pageItems, PaginationControls } from "./PaginationControls";
 import { PeriodSelector } from "./PeriodSelector";
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const MAX_TRACKS = 50;
 
 interface TopTracksViewProps {
@@ -27,8 +25,6 @@ function formatMood(label: string | null, confidence: number | null) {
 }
 
 export function TopTracksView({ period, onPeriodChange }: TopTracksViewProps) {
-  const [pageSize, setPageSize] = useState(10);
-  const [page, setPage] = useState(1);
   const [data, setData] = useState<TopTracksResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,14 +56,7 @@ export function TopTracksView({ period, onPeriodChange }: TopTracksViewProps) {
     };
   }, [period]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [period, pageSize]);
-
   const tracks = data?.tracks ?? [];
-  const totalPages = pageCount(tracks.length, pageSize);
-  const safePage = Math.min(page, totalPages);
-  const visibleTracks = pageItems(tracks, safePage, pageSize);
 
   return (
     <>
@@ -76,22 +65,7 @@ export function TopTracksView({ period, onPeriodChange }: TopTracksViewProps) {
           <p>Music Listening Intelligence</p>
           <h1>Top Tracks</h1>
         </div>
-        <div className="header-controls">
-          <PeriodSelector value={period} onChange={onPeriodChange} />
-          <label className="select-control">
-            <span>Rows</span>
-            <select
-              value={pageSize}
-              onChange={(event) => setPageSize(Number(event.target.value))}
-            >
-              {PAGE_SIZE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <PeriodSelector value={period} onChange={onPeriodChange} />
       </header>
 
       {error ? <div className="banner">{error}</div> : null}
@@ -106,7 +80,7 @@ export function TopTracksView({ period, onPeriodChange }: TopTracksViewProps) {
               <span>Time</span>
               <span>Mood</span>
             </div>
-            {visibleTracks.map((track, index) => (
+            {tracks.map((track, index) => (
               <div
                 className="tracks-row"
                 role="row"
@@ -144,13 +118,6 @@ export function TopTracksView({ period, onPeriodChange }: TopTracksViewProps) {
                 </span>
               </div>
             ))}
-            <PaginationControls
-              page={safePage}
-              pageSize={pageSize}
-              totalItems={tracks.length}
-              onPageChange={setPage}
-              label="Top tracks pages"
-            />
           </div>
         ) : (
           <p className="empty-state">No track data yet</p>

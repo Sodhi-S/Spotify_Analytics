@@ -1,14 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import { fetchAppSettings, searchCities, updateAppSettings } from "../api";
 import type { CityOption } from "../types";
-import { pageCount, pageItems, PaginationControls } from "./PaginationControls";
 
 export function SettingsView() {
   const [weatherCity, setWeatherCity] = useState("");
   const [savedCity, setSavedCity] = useState("");
   const [selectedCity, setSelectedCity] = useState<CityOption | null>(null);
   const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
-  const [cityPage, setCityPage] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -70,7 +68,6 @@ export function SettingsView() {
         .then((cities) => {
           if (!cancelled) {
             setCityOptions(cities);
-            setCityPage(1);
           }
         })
         .catch(() => {
@@ -126,9 +123,6 @@ export function SettingsView() {
   }
 
   const hasChanges = weatherCity.trim() !== savedCity;
-  const cityPageSize = 5;
-  const safeCityPage = Math.min(cityPage, pageCount(cityOptions.length, cityPageSize));
-  const visibleCityOptions = pageItems(cityOptions, safeCityPage, cityPageSize);
 
   function chooseCity(city: CityOption) {
     setSelectedCity(city);
@@ -173,7 +167,7 @@ export function SettingsView() {
               {isSearching ? <span className="city-search-status">Searching</span> : null}
               {cityOptions.length ? (
                 <div className="city-options" role="listbox">
-                  {visibleCityOptions.map((city) => (
+                  {cityOptions.map((city) => (
                     <button
                       type="button"
                       key={city.id}
@@ -184,13 +178,6 @@ export function SettingsView() {
                       <span>{city.label}</span>
                     </button>
                   ))}
-                  <PaginationControls
-                    page={safeCityPage}
-                    pageSize={cityPageSize}
-                    totalItems={cityOptions.length}
-                    onPageChange={setCityPage}
-                    label="City search result pages"
-                  />
                 </div>
               ) : null}
             </div>

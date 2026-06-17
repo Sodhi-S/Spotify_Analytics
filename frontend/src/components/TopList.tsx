@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { formatCount } from "../privacy";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { ImageThumbnail } from "./ImageThumbnail";
-import { pageCount, pageItems, PaginationControls } from "./PaginationControls";
+// pagination removed: TopList now renders all items passed to it
 
 interface TopListItem {
   id: string;
@@ -33,13 +33,11 @@ export function TopList({
   showCountLabel = false,
   pageSize = 3,
 }: TopListProps) {
-  const [page, setPage] = useState(1);
-  const totalPages = pageCount(items.length, pageSize);
-  const visibleItems = pageItems(items, Math.min(page, totalPages), pageSize);
-
   useEffect(() => {
-    setPage(1);
+    // placeholder: items or pageSize changed
   }, [items, pageSize]);
+
+  const visibleItems = items;
 
   return (
     <section className={`panel ${className}`.trim()}>
@@ -74,13 +72,7 @@ export function TopList({
               </li>
             ))}
           </ol>
-          <PaginationControls
-            page={page}
-            pageSize={pageSize}
-            totalItems={items.length}
-            onPageChange={setPage}
-            label={`${title} pages`}
-          />
+          {/* pagination removed - render full list */}
         </>
       )}
     </section>

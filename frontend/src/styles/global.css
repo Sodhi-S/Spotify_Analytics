@@ -906,7 +906,7 @@ select {
 
 .view-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(112px, max-content));
+  grid-template-columns: repeat(6, minmax(96px, max-content));
   justify-content: center;
   width: 100vw;
   margin: 0 calc(50% - 50vw) 28px;
@@ -916,6 +916,64 @@ select {
   border-radius: 0;
   background: rgb(3 5 4 / 78%);
   box-shadow: none;
+}
+
+.empty-page {
+  min-height: calc(100vh - 132px);
+}
+
+.create-panel {
+  display: flex;
+  min-height: 280px;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.ai-create-button {
+  position: relative;
+  min-height: 54px;
+  min-width: 168px;
+  overflow: hidden;
+  border: 1px solid rgb(84 245 139 / 54%);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, #54f58b 0%, #42d9ff 48%, #b47cff 100%);
+  color: #030504;
+  cursor: pointer;
+  font-weight: 950;
+  padding: 0 24px;
+  box-shadow:
+    0 0 18px rgb(84 245 139 / 30%),
+    0 0 34px rgb(66 217 255 / 20%),
+    inset 0 1px 0 rgb(255 255 255 / 38%);
+}
+
+.ai-create-button::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background:
+    linear-gradient(
+      115deg,
+      transparent 0 38%,
+      rgb(255 255 255 / 58%) 48%,
+      transparent 58% 100%
+    );
+  transform: translateX(-42%) rotate(8deg);
+  transition: transform 420ms ease;
+}
+
+.ai-create-button:hover::before {
+  transform: translateX(42%) rotate(8deg);
+}
+
+.ai-create-button:hover {
+  border-color: rgb(255 255 255 / 66%);
+  box-shadow:
+    0 0 22px rgb(84 245 139 / 40%),
+    0 0 42px rgb(180 124 255 / 24%),
+    inset 0 1px 0 rgb(255 255 255 / 46%);
 }
 
 .view-tabs button {
@@ -949,6 +1007,35 @@ select {
   box-shadow:
     0 0 8px rgb(84 245 139 / 54%),
     0 0 16px rgb(84 245 139 / 28%);
+}
+
+.view-tabs button.ai-tab {
+  background:
+    linear-gradient(135deg, #54f58b 0%, #42d9ff 48%, #b47cff 100%);
+  background-clip: text;
+  color: transparent;
+  font-weight: 900;
+  text-shadow:
+    0 0 10px rgb(84 245 139 / 22%),
+    0 0 18px rgb(180 124 255 / 16%);
+}
+
+.view-tabs button.ai-tab:hover,
+.view-tabs button.ai-tab.active {
+  color: transparent;
+  text-shadow:
+    0 0 12px rgb(84 245 139 / 38%),
+    0 0 24px rgb(66 217 255 / 24%),
+    0 0 30px rgb(180 124 255 / 20%);
+}
+
+.view-tabs button.ai-tab.active::after {
+  background:
+    linear-gradient(90deg, #54f58b 0%, #42d9ff 48%, #b47cff 100%);
+  box-shadow:
+    0 0 10px rgb(84 245 139 / 44%),
+    0 0 20px rgb(66 217 255 / 24%),
+    0 0 26px rgb(180 124 255 / 20%);
 }
 
 .settings-corner-button {

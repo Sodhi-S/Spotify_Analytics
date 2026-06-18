@@ -9,13 +9,15 @@ import { TopList } from "./components/TopList";
 import { WeatherView } from "./components/WeatherView";
 import type { OverviewResponse, Period } from "./types";
 
-type View = "overview" | "top-tracks" | "moods" | "weather" | "settings";
+type View = "overview" | "top-tracks" | "moods" | "weather" | "datetime" | "create" | "settings";
 
 const VIEW_PATHS: Record<View, string> = {
   overview: "/overview",
   "top-tracks": "/top-tracks",
   moods: "/moods",
   weather: "/weather",
+  datetime: "/datetime",
+  create: "/create",
   settings: "/settings",
 };
 
@@ -29,6 +31,12 @@ function viewFromPath(pathname: string): View {
   }
   if (path === "/weather") {
     return "weather";
+  }
+  if (path === "/datetime") {
+    return "datetime";
+  }
+  if (path === "/create") {
+    return "create";
   }
   if (path === "/settings") {
     return "settings";
@@ -164,6 +172,20 @@ function App() {
         >
           Weather
         </button>
+        <button
+          type="button"
+          className={view === "datetime" ? "active" : ""}
+          onClick={() => navigateToView("datetime")}
+        >
+          DateTime
+        </button>
+        <button
+          type="button"
+          className={view === "create" ? "ai-tab active" : "ai-tab"}
+          onClick={() => navigateToView("create")}
+        >
+          Create
+        </button>
       </nav>
       <button
         type="button"
@@ -233,10 +255,36 @@ function App() {
         />
       ) : view === "weather" ? (
         <WeatherView period={period} onPeriodChange={setPeriod} />
+      ) : view === "datetime" ? (
+        <DateTimeView />
+      ) : view === "create" ? (
+        <CreateView />
       ) : (
         <SettingsView />
       )}
     </main>
+  );
+}
+
+function DateTimeView() {
+  return <section className="empty-page" aria-label="DateTime" />;
+}
+
+function CreateView() {
+  return (
+    <>
+      <header className="dashboard-header">
+        <div>
+          <p>Music Listening Intelligence</p>
+          <h1>Create</h1>
+        </div>
+      </header>
+      <section className="panel create-panel">
+        <button type="button" className="ai-create-button">
+          Create with AI
+        </button>
+      </section>
+    </>
   );
 }
 

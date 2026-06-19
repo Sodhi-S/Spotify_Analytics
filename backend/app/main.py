@@ -11,6 +11,8 @@ from app.api.schemas import (
     AppSettingsUpdate,
     CityOption,
     ArtistMoodFingerprintsResponse,
+    DateTimeMonthDetailResponse,
+    DateTimeOverviewResponse,
     OverviewResponse,
     TopTracksResponse,
     WeatherCorrelationResponse,
@@ -21,6 +23,11 @@ from app.ingestion.openmeteo import OpenMeteoClient
 from app.services.artist_mood_fingerprints import (
     ArtistMoodFingerprintService,
     validate_artist_mood_params,
+)
+from app.services.datetime_insights import (
+    DateTimeInsightsService,
+    validate_datetime_period,
+    validate_year_month,
 )
 from app.services.overview import VALID_PERIODS, OverviewService
 from app.pipeline.weather_jobs import process_weather_city
@@ -193,4 +200,49 @@ def get_weather_correlation(
             return WeatherCorrelationService(connection).get_weather_correlation(period)
     except SQLAlchemyError:
         logger.exception("Database error while loading weather correlation")
+        raise HTTPException(status_code=500, detail="Internal server error") from None
+
+
+@app.get("/api/datetime/overview", response_model=DateTimeOverviewResponse)
+def get_datetime_overview(
+    period: str = Query(
+        default="7d",
+        description="Accepted values: 7d, 30d, 6m, all",
+    )
+) -> DateTimeOverviewResponse:
+    try:
+        validate_datetime_period(period)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    try:
+        with db_connection() as connection:
+            return DateTimeInsightsService(connection).get_overview(period)
+    except SQLAlchemyError:
+        logger.exception("Database error while loading datetime overview")
+        raise HTTPException(status_code=500, detail="Internal server error") from None
+
+
+@app.get(
+    "/api/datetime/months/{year_month}",
+    response_model=DateTimeMonthDetailResponse,
+)
+def get_datetime_month_detail(
+    year_month: str,
+    period: str = Query(
+        default="all",
+        description="Accepted values: 7d, 30d, 6m, all",
+    ),
+) -> DateTimeMonthDetailResponse:
+    try:
+        validate_year_month(year_month)
+        validate_datetime_period(period)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    try:
+        with db_connection() as connection:
+            return DateTimeInsightsService(connection).get_month_detail(year_month, period)
+    except SQLAlchemyError:
+        logger.exception("Database error while loading datetime month detail")
         raise HTTPException(status_code=500, detail="Internal server error") from None

@@ -109,6 +109,31 @@ models:
       - name: listen_count
         tests: [not_null]
 
+  - name: mart_datetime_listens
+    columns:
+      - name: listen_id
+        tests: [not_null, unique]
+      - name: track_id
+        tests: [not_null]
+      - name: artist_id
+        tests: [not_null]
+      - name: local_date
+        tests: [not_null]
+      - name: local_hour
+        tests: [not_null]
+      - name: day_of_week
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      - name: is_weekend
+        tests:
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false
+
   - name: dim_weather
     columns:
       - name: date_id

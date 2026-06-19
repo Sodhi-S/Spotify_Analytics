@@ -222,6 +222,90 @@ class AppSettingsUpdate(BaseModel):
     weather_longitude: float | None = Field(default=None, ge=-180, le=180)
 
 
+class DateTimeMonthBucket(BaseModel):
+    year: int
+    month: int = Field(ge=1, le=12)
+    year_month: str
+    total_listens: int = Field(ge=0)
+    unique_tracks: int = Field(ge=0)
+    unique_artists: int = Field(ge=0)
+    avg_valence: float | None = Field(default=None, ge=0, le=1)
+    avg_energy: float | None = Field(default=None, ge=0, le=1)
+    dominant_mood: str | None = None
+    top_artist_name: str | None = None
+
+
+class DateTimeDayBucket(BaseModel):
+    day_of_week: str
+    total_listens: int = Field(ge=0)
+    avg_valence: float | None = Field(default=None, ge=0, le=1)
+    avg_energy: float | None = Field(default=None, ge=0, le=1)
+    dominant_mood: str | None = None
+    top_artist_name: str | None = None
+    is_weekend: bool
+
+
+class DateTimeHourBucket(BaseModel):
+    hour: int = Field(ge=0, le=23)
+    time_segment: str
+    total_listens: int = Field(ge=0)
+    avg_valence: float | None = Field(default=None, ge=0, le=1)
+    avg_energy: float | None = Field(default=None, ge=0, le=1)
+    dominant_mood: str | None = None
+
+
+class DateTimeHeatmapCell(BaseModel):
+    day_of_week: str
+    hour: int = Field(ge=0, le=23)
+    total_listens: int = Field(ge=0)
+    avg_valence: float | None = Field(default=None, ge=0, le=1)
+    avg_energy: float | None = Field(default=None, ge=0, le=1)
+    dominant_mood: str | None = None
+
+
+class DateTimeOverviewResponse(BaseModel):
+    period: Period
+    total_listens: int = Field(ge=0)
+    most_active_month: str | None = None
+    most_active_day: str | None = None
+    most_active_hour: int | None = Field(default=None, ge=0, le=23)
+    highest_energy_bucket: str | None = None
+    highest_valence_bucket: str | None = None
+    monthly: list[DateTimeMonthBucket]
+    days: list[DateTimeDayBucket]
+    hours: list[DateTimeHourBucket]
+    heatmap: list[DateTimeHeatmapCell]
+
+
+class DateTimeMonthTopTrack(BaseModel):
+    track_id: str
+    name: str
+    artist_name: str
+    play_count: int = Field(ge=0)
+    album_image_url: str | None = None
+
+
+class DateTimeMonthTopArtist(BaseModel):
+    artist_id: str
+    name: str
+    play_count: int = Field(ge=0)
+    image_url: str | None = None
+
+
+class DateTimeMonthDetailResponse(BaseModel):
+    year_month: str
+    total_listens: int = Field(ge=0)
+    unique_tracks: int = Field(ge=0)
+    unique_artists: int = Field(ge=0)
+    avg_valence: float | None = Field(default=None, ge=0, le=1)
+    avg_energy: float | None = Field(default=None, ge=0, le=1)
+    dominant_mood: str | None = None
+    top_tracks: list[DateTimeMonthTopTrack]
+    top_artists: list[DateTimeMonthTopArtist]
+    top_tags: list[TopTag]
+    summary: str
+
+
 class OverviewResponse(BaseModel):
     period: Period
     total_listens: int = Field(ge=0)

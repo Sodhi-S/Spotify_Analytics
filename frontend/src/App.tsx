@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchOverview } from "./api";
+import { DateTimeView } from "./components/DateTimeView";
 import { MoodsView } from "./components/MoodsView";
 import { PeriodSelector } from "./components/PeriodSelector";
 import { SettingsView } from "./components/SettingsView";
@@ -131,16 +132,6 @@ function App() {
     [overview],
   );
 
-  const topTags = useMemo(
-    () =>
-      overview?.top_tags.map((tag) => ({
-        id: tag.tag,
-        name: tag.tag,
-        count: tag.listen_count,
-      })) ?? [],
-    [overview],
-  );
-
   return (
     <main className="dashboard-shell">
       <nav className="view-tabs" aria-label="Dashboard views">
@@ -234,12 +225,7 @@ function App() {
             </section>
 
             <section className="overview-bottom-grid">
-              <TopList
-                title="Top 5 Tags"
-                items={topTags}
-                countLabel="listens"
-                className="overview-tags-panel"
-              />
+              <ValenceEnergyExplainer />
             </section>
           </div>
         </>
@@ -266,8 +252,45 @@ function App() {
   );
 }
 
-function DateTimeView() {
-  return <section className="empty-page" aria-label="DateTime" />;
+function ValenceEnergyExplainer() {
+  return (
+    <section className="panel metric-explainer-panel">
+      <div className="panel-heading">
+        <h2>Valence & Energy - Explained</h2>
+        <span>0.00 to 1.00</span>
+      </div>
+      <div className="metric-explainer-grid">
+        <article className="metric-explainer-card">
+          <span>Valence</span>
+          <strong>Emotional brightness</strong>
+          <p>
+            Valence estimates how positive or negative a track feels. Lower values
+            are darker, sadder, or more tense; higher values feel brighter, happier,
+            or more uplifting.
+          </p>
+          <div className="metric-scale" aria-hidden="true">
+            <span>0.00</span>
+            <i />
+            <span>1.00</span>
+          </div>
+        </article>
+        <article className="metric-explainer-card">
+          <span>Energy</span>
+          <strong>Intensity and activity</strong>
+          <p>
+            Energy estimates how active, loud, fast, or intense a track feels. Lower
+            values are calmer and softer; higher values are more driving, loud, or
+            physically energetic.
+          </p>
+          <div className="metric-scale" aria-hidden="true">
+            <span>0.00</span>
+            <i />
+            <span>1.00</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  );
 }
 
 function CreateView() {

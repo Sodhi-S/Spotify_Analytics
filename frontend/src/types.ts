@@ -194,6 +194,89 @@ export interface WeatherCorrelationResponse {
   temperature_mood_callout: string | null;
 }
 
+export interface DateTimeMonthBucket {
+  year: number;
+  month: number;
+  year_month: string;
+  total_listens: number;
+  unique_tracks: number;
+  unique_artists: number;
+  avg_valence: number | null;
+  avg_energy: number | null;
+  dominant_mood: string | null;
+  top_artist_name: string | null;
+}
+
+export interface DateTimeDayBucket {
+  day_of_week: string;
+  total_listens: number;
+  avg_valence: number | null;
+  avg_energy: number | null;
+  dominant_mood: string | null;
+  top_artist_name: string | null;
+  is_weekend: boolean;
+}
+
+export interface DateTimeHourBucket {
+  hour: number;
+  time_segment: string;
+  total_listens: number;
+  avg_valence: number | null;
+  avg_energy: number | null;
+  dominant_mood: string | null;
+}
+
+export interface DateTimeHeatmapCell {
+  day_of_week: string;
+  hour: number;
+  total_listens: number;
+  avg_valence: number | null;
+  avg_energy: number | null;
+  dominant_mood: string | null;
+}
+
+export interface DateTimeOverviewResponse {
+  period: Period;
+  total_listens: number;
+  most_active_month: string | null;
+  most_active_day: string | null;
+  most_active_hour: number | null;
+  highest_energy_bucket: string | null;
+  highest_valence_bucket: string | null;
+  monthly: DateTimeMonthBucket[];
+  days: DateTimeDayBucket[];
+  hours: DateTimeHourBucket[];
+  heatmap: DateTimeHeatmapCell[];
+}
+
+export interface DateTimeMonthDetailResponse {
+  year_month: string;
+  total_listens: number;
+  unique_tracks: number;
+  unique_artists: number;
+  avg_valence: number | null;
+  avg_energy: number | null;
+  dominant_mood: string | null;
+  top_tracks: {
+    track_id: string;
+    name: string;
+    artist_name: string;
+    play_count: number;
+    album_image_url: string | null;
+  }[];
+  top_artists: {
+    artist_id: string;
+    name: string;
+    play_count: number;
+    image_url: string | null;
+  }[];
+  top_tags: {
+    tag: string;
+    listen_count: number;
+  }[];
+  summary: string;
+}
+
 export interface AppSettings {
   weather_city: string;
   weather_latitude: number | null;

@@ -2,6 +2,8 @@ import type {
   AppSettings,
   ArtistMoodFingerprintsResponse,
   CityOption,
+  DateTimeMonthDetailResponse,
+  DateTimeOverviewResponse,
   OverviewResponse,
   Period,
   TopTracksResponse,
@@ -102,6 +104,37 @@ export async function fetchWeatherCorrelation(
       response.status === 400
         ? "Invalid weather period selected."
         : "Unable to load weather correlation.";
+    throw new Error(message);
+  }
+  return response.json();
+}
+
+export async function fetchDateTimeOverview(
+  period: Period,
+): Promise<DateTimeOverviewResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/datetime/overview?period=${period}`);
+  if (!response.ok) {
+    const message =
+      response.status === 400
+        ? "Invalid datetime period selected."
+        : "Unable to load datetime insights.";
+    throw new Error(message);
+  }
+  return response.json();
+}
+
+export async function fetchDateTimeMonthDetail(
+  yearMonth: string,
+  period: Period = "all",
+): Promise<DateTimeMonthDetailResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/datetime/months/${yearMonth}?period=${period}`,
+  );
+  if (!response.ok) {
+    const message =
+      response.status === 400
+        ? "Invalid month selected."
+        : "Unable to load month details.";
     throw new Error(message);
   }
   return response.json();

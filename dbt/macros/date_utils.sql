@@ -25,3 +25,16 @@
 {% macro is_weekend(column_name) -%}
     case when {{ day_of_week_number(column_name) }} in (6, 7) then true else false end
 {%- endmacro %}
+
+{% macro to_local_timestamp(column_name) -%}
+    {%- set tz = env_var('LISTENING_TIMEZONE', 'America/Toronto') -%}
+    {%- if target.type == 'snowflake' -%}
+        convert_timezone('UTC', '{{ tz }}', {{ column_name }})
+    {%- else -%}
+        ({{ column_name }} at time zone '{{ tz }}')
+    {%- endif -%}
+{%- endmacro %}
+
+{% macro year_month_label(column_name) -%}
+    to_char({{ column_name }}, 'YYYY-MM')
+{%- endmacro %}

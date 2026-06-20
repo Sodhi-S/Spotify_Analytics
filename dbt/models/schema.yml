@@ -3,6 +3,8 @@ version: 2
 models:
   - name: stg_recent_tracks
     columns:
+      - name: user_id
+        tests: [not_null]
       - name: listen_id
         tests: [not_null, unique]
       - name: track_id
@@ -18,6 +20,8 @@ models:
 
   - name: fact_listens
     columns:
+      - name: user_id
+        tests: [not_null]
       - name: listen_id
         tests: [not_null, unique]
       - name: track_id
@@ -95,13 +99,17 @@ models:
 
   - name: mart_listening_summary
     columns:
+      - name: user_id
+        tests: [not_null]
       - name: date_id
-        tests: [not_null, unique]
+        tests: [not_null]
       - name: total_listens
         tests: [not_null]
 
   - name: mart_tag_listen_counts
     columns:
+      - name: user_id
+        tests: [not_null]
       - name: date_id
         tests: [not_null]
       - name: tag

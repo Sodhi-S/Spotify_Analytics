@@ -15,8 +15,9 @@ def _json(value: Any) -> str:
 
 
 class RawLoader:
-    def __init__(self, connection: Connection):
+    def __init__(self, connection: Connection, user_id: str | None = None):
         self.connection = connection
+        self.user_id = user_id
 
     def ensure_image_enrichment_tables(self) -> None:
         self.connection.execute(
@@ -55,6 +56,19 @@ class RawLoader:
         )
 
     def get_last_fetched_at(self, source: str) -> datetime | None:
+        if self.user_id is not None:
+            row = self.connection.execute(
+                text(
+                    """
+                    select last_fetched_at
+                    from app.user_ingestion_state
+                    where user_id = :user_id and source = :source
+                    """
+                ),
+                {"user_id": self.user_id, "source": source},
+            ).first()
+            return row._mapping["last_fetched_at"] if row else None
+
         row = self.connection.execute(
             text(
                 """
@@ -68,6 +82,27 @@ class RawLoader:
         return row._mapping["last_fetched_at"] if row else None
 
     def upsert_last_fetched_at(self, source: str, last_fetched_at: datetime) -> None:
+        if self.user_id is not None:
+            self.connection.execute(
+                text(
+                    """
+                    insert into app.user_ingestion_state (
+                        user_id, source, last_fetched_at, updated_at
+                    )
+                    values (:user_id, :source, :last_fetched_at, current_timestamp)
+                    on conflict (user_id, source) do update set
+                        last_fetched_at = excluded.last_fetched_at,
+                        updated_at = current_timestamp
+                    """
+                ),
+                {
+                    "user_id": self.user_id,
+                    "source": source,
+                    "last_fetched_at": last_fetched_at,
+                },
+            )
+            return
+
         self.connection.execute(
             text(
                 """
@@ -85,11 +120,17 @@ class RawLoader:
         self.connection.execute(
             text(
                 """
-                insert into raw.raw_failed (source, raw_payload, error_message, failed_at)
-                values (:source, cast(:raw_payload as jsonb), :error_message, current_timestamp)
+                insert into raw.raw_failed (
+                    user_id, source, raw_payload, error_message, failed_at
+                )
+                values (
+                    :user_id, :source, cast(:raw_payload as jsonb),
+                    :error_message, current_timestamp
+                )
                 """
             ),
             {
+                "user_id": self.user_id,
                 "source": source,
                 "raw_payload": _json(payload),
                 "error_message": error_message[:1000],
@@ -97,21 +138,23 @@ class RawLoader:
         )
 
     def insert_recent_track(self, row: dict[str, Any]) -> bool:
+        if self.user_id is None:
+            raise RuntimeError("RawLoader.user_id is required to insert recent tracks")
         result = self.connection.execute(
             text(
                 """
                 insert into raw.recent_tracks (
-                    track_name, artist_name, album, played_at, track_mbid,
+                    user_id, track_name, artist_name, album, played_at, track_mbid,
                     artist_mbid, raw_payload, fetched_at
                 )
                 values (
-                    :track_name, :artist_name, :album, :played_at, :track_mbid,
+                    :user_id, :track_name, :artist_name, :album, :played_at, :track_mbid,
                     :artist_mbid, cast(:raw_payload as jsonb), current_timestamp
                 )
-                on conflict (played_at, track_name, artist_name) do nothing
+                on conflict (user_id, played_at, track_name, artist_name) do nothing
                 """
             ),
-            {**row, "raw_payload": _json(row["raw_payload"])},
+            {**row, "user_id": self.user_id, "raw_payload": _json(row["raw_payload"])},
         )
         return result.rowcount > 0
 
@@ -512,17 +555,25 @@ class RawLoader:
         rank: int,
         period: str,
     ) -> None:
+        if self.user_id is None:
+            raise RuntimeError("RawLoader.user_id is required to upsert top artists")
         self.connection.execute(
             text(
                 """
-                insert into raw.top_artists (artist_name, play_count, rank, period, fetched_at)
-                values (:artist_name, :play_count, :rank, :period, current_timestamp)
-                on conflict (artist_name, period, rank) do update set
+                insert into raw.top_artists (
+                    user_id, artist_name, play_count, rank, period, fetched_at
+                )
+                values (
+                    :user_id, :artist_name, :play_count, :rank, :period, current_timestamp
+                )
+                on conflict (user_id, period, rank) do update set
+                    artist_name = excluded.artist_name,
                     play_count = excluded.play_count,
                     fetched_at = current_timestamp
                 """
             ),
             {
+                "user_id": self.user_id,
                 "artist_name": artist_name,
                 "play_count": play_count,
                 "rank": rank,
@@ -538,22 +589,27 @@ class RawLoader:
         rank: int,
         period: str,
     ) -> None:
+        if self.user_id is None:
+            raise RuntimeError("RawLoader.user_id is required to upsert top tracks")
         self.connection.execute(
             text(
                 """
                 insert into raw.top_tracks (
-                    track_name, artist_name, play_count, rank, period, fetched_at
+                    user_id, track_name, artist_name, play_count, rank, period, fetched_at
                 )
                 values (
-                    :track_name, :artist_name, :play_count, :rank, :period,
+                    :user_id, :track_name, :artist_name, :play_count, :rank, :period,
                     current_timestamp
                 )
-                on conflict (track_name, artist_name, period, rank) do update set
+                on conflict (user_id, period, rank) do update set
+                    track_name = excluded.track_name,
+                    artist_name = excluded.artist_name,
                     play_count = excluded.play_count,
                     fetched_at = current_timestamp
                 """
             ),
             {
+                "user_id": self.user_id,
                 "track_name": track_name,
                 "artist_name": artist_name,
                 "play_count": play_count,

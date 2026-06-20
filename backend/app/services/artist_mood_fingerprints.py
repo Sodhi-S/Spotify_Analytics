@@ -45,12 +45,17 @@ class ArtistAccumulator:
     evening_plays: int = 0
 
 
-def _params(start_date: object | None) -> dict[str, object]:
-    return {} if start_date is None else {"start_date": start_date}
+def _params(start_date: object | None, user_id: str) -> dict[str, object]:
+    params: dict[str, object] = {"user_id": user_id}
+    if start_date is not None:
+        params["start_date"] = start_date
+    return params
 
 
 def _date_clause(start_date: object | None) -> str:
-    return "" if start_date is None else "where fl.date_id >= :start_date"
+    if start_date is None:
+        return "where fl.user_id = :user_id"
+    return "where fl.user_id = :user_id and fl.date_id >= :start_date"
 
 
 def _split_tags(value: Any) -> list[str]:
@@ -142,8 +147,9 @@ def _callout(
 
 
 class ArtistMoodFingerprintService:
-    def __init__(self, connection: Connection):
+    def __init__(self, connection: Connection, user_id: str):
         self.connection = connection
+        self.user_id = user_id
 
     def get_artist_mood_fingerprints(
         self,
@@ -185,7 +191,7 @@ class ArtistMoodFingerprintService:
                 order by count(*) desc
                 """
             ),
-            _params(period_filter.start_date),
+            _params(period_filter.start_date, self.user_id),
         )
 
         artists: dict[str, ArtistAccumulator] = {}

@@ -29,15 +29,21 @@ class WeatherLocation:
     longitude: float | None = None
 
 
-def _settings_map(connection: Connection) -> dict[str, str]:
-    rows = connection.execute(
-        text(
-            """
-            select key, value
-            from raw.user_settings
-            """
+def _settings_map(connection: Connection, user_id: str | None = None) -> dict[str, str]:
+    if user_id is not None:
+        rows = connection.execute(
+            text(
+                """
+                select key, value
+                from app.user_settings
+                where user_id = :user_id
+                """
+            ),
+            {"user_id": user_id},
         )
-    )
+        return {row._mapping["key"]: row._mapping["value"] for row in rows}
+
+    rows = connection.execute(text("select key, value from raw.user_settings"))
     return {row._mapping["key"]: row._mapping["value"] for row in rows}
 
 
@@ -47,8 +53,8 @@ def _float_setting(value: str | None) -> float | None:
     return float(value)
 
 
-def get_weather_location(connection: Connection) -> WeatherLocation:
-    values = _settings_map(connection)
+def get_weather_location(connection: Connection, user_id: str | None = None) -> WeatherLocation:
+    values = _settings_map(connection, user_id=user_id)
     city = clean_weather_city(values.get(WEATHER_CITY_KEY) or get_settings().openmeteo_city or "Toronto")
     return WeatherLocation(
         city=city,
@@ -57,16 +63,17 @@ def get_weather_location(connection: Connection) -> WeatherLocation:
     )
 
 
-def get_weather_city(connection: Connection) -> str:
-    return get_weather_location(connection).city
+def get_weather_city(connection: Connection, user_id: str | None = None) -> str:
+    return get_weather_location(connection, user_id=user_id).city
 
 
 class SettingsService:
-    def __init__(self, connection: Connection):
+    def __init__(self, connection: Connection, user_id: str | None = None):
         self.connection = connection
+        self.user_id = user_id
 
     def get_settings(self) -> AppSettingsResponse:
-        location = get_weather_location(self.connection)
+        location = get_weather_location(self.connection, user_id=self.user_id)
         return AppSettingsResponse(
             weather_city=location.city,
             weather_latitude=location.latitude,
@@ -94,18 +101,32 @@ class SettingsService:
                 ),
             },
         ]
-        self.connection.execute(
-            text(
-                """
-                insert into raw.user_settings (key, value, updated_at)
-                values (:key, :value, current_timestamp)
-                on conflict (key) do update set
-                    value = excluded.value,
-                    updated_at = current_timestamp
-                """
-            ),
-            rows,
-        )
+        if self.user_id is not None:
+            self.connection.execute(
+                text(
+                    """
+                    insert into app.user_settings (user_id, key, value, updated_at)
+                    values (:user_id, :key, :value, current_timestamp)
+                    on conflict (user_id, key) do update set
+                        value = excluded.value,
+                        updated_at = current_timestamp
+                    """
+                ),
+                [{**row, "user_id": self.user_id} for row in rows],
+            )
+        else:
+            self.connection.execute(
+                text(
+                    """
+                    insert into raw.user_settings (key, value, updated_at)
+                    values (:key, :value, current_timestamp)
+                    on conflict (key) do update set
+                        value = excluded.value,
+                        updated_at = current_timestamp
+                    """
+                ),
+                rows,
+            )
         return AppSettingsResponse(
             weather_city=weather_city,
             weather_latitude=settings_update.weather_latitude,

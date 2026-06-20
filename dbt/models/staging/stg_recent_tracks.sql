@@ -4,7 +4,8 @@ with source as (
 
 cleaned as (
     select
-        {{ surrogate_key(["track_name", "artist_name", "played_at"]) }} as listen_id,
+        cast(user_id as {{ dbt.type_string() }}) as user_id,
+        {{ surrogate_key(["user_id", "track_name", "artist_name", "played_at"]) }} as listen_id,
         {{ surrogate_key(["track_name", "artist_name"]) }} as track_id,
         {{ surrogate_key(["artist_name"]) }} as artist_id,
         cast(track_name as {{ dbt.type_string() }}) as track_name,
@@ -20,6 +21,7 @@ cleaned as (
     where track_name is not null
       and artist_name is not null
       and played_at is not null
+      and user_id is not null
       {% if var('start_date', none) is not none %}
         and cast(played_at as date) >= cast('{{ var("start_date") }}' as date)
       {% endif %}

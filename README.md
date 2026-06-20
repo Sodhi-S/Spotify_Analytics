@@ -306,7 +306,7 @@ When enabled, the UI hides count labels and flattens count-based chart sizing. T
 - Node.js 18+ and npm
 - Docker Desktop
 - PostgreSQL client tools such as `psql`
-- Last.fm API key and username
+- Last.fm API key, shared secret, and username for local scheduled ingestion
 - Optional: Conda for the Music2Emo worker environment
 
 ### 1. Start PostgreSQL
@@ -337,9 +337,11 @@ Fill the required values:
 
 ```text
 LASTFM_API_KEY=your_lastfm_api_key
+LASTFM_API_SECRET=your_lastfm_api_secret
 LASTFM_USERNAME=your_lastfm_username
 DB_CONNECTION_STRING=postgresql+psycopg://postgres:postgres@localhost:5432/music_intelligence
 OPENMETEO_CITY=Toronto
+FRONTEND_AUTH_REDIRECT_URL=http://localhost:3000
 ```
 
 ### 3. Install Python Dependencies

@@ -1175,6 +1175,131 @@ select {
     0 0 18px rgb(84 245 139 / 22%);
 }
 
+.signout-corner-button {
+  position: fixed;
+  z-index: 30;
+  top: 10px;
+  right: 56px;
+  min-height: 34px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  background: rgb(20 22 21 / 82%);
+  color: rgb(255 255 255 / 64%);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 0 11px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 6%),
+    0 10px 24px rgb(0 0 0 / 24%);
+}
+
+.signout-corner-button:hover {
+  border-color: rgb(255 255 255 / 24%);
+  color: var(--text-primary);
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 28px 0;
+}
+
+.auth-panel {
+  display: grid;
+  gap: 22px;
+  width: min(520px, 100%);
+  min-height: auto;
+  padding: 30px;
+}
+
+.auth-kicker {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.auth-panel h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(2.2rem, 8vw, 3.8rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-link-button,
+.secondary-link-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border-radius: 8px;
+  font-weight: 900;
+  text-decoration: none;
+  padding: 0 18px;
+}
+
+.auth-link-button {
+  color: #030504;
+}
+
+.secondary-link-button,
+.secondary-button {
+  border: 1px solid rgb(255 255 255 / 14%);
+  background: rgb(255 255 255 / 5%);
+  color: var(--text-secondary);
+}
+
+.secondary-button {
+  cursor: pointer;
+}
+
+.secondary-link-button:hover,
+.secondary-button:hover {
+  border-color: rgb(84 245 139 / 40%);
+  color: var(--text-primary);
+}
+
+.import-status {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgb(84 245 139 / 24%);
+  border-radius: 8px;
+  background: rgb(84 245 139 / 8%);
+}
+
+.import-status span {
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.import-status strong {
+  color: var(--text-primary);
+  font-size: 1.05rem;
+}
+
 .dashboard-header {
   align-items: end;
   margin-bottom: 28px;

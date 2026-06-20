@@ -21,6 +21,7 @@ def _load_env() -> None:
 @dataclass(frozen=True)
 class Settings:
     lastfm_api_key: str
+    lastfm_api_secret: str
     lastfm_username: str
     db_connection_string: str
     warehouse_schema: str
@@ -39,14 +40,20 @@ class Settings:
     image_enrichment_run_after_ingest: bool
     image_enrichment_artist_album_fallback: bool
     dbt_executable: str
+    app_session_days: int
+    frontend_auth_redirect_url: str
+    session_cookie_name: str
 
 
 def get_settings() -> Settings:
     _load_env()
     cors = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173")
     return Settings(
-        lastfm_api_key=os.getenv("LASTFM_API_KEY", ""),
-        lastfm_username=os.getenv("LASTFM_USERNAME", ""),
+        lastfm_api_key=os.getenv("LASTFM_API_KEY", "").strip(),
+        lastfm_api_secret=(
+            os.getenv("LASTFM_API_SECRET") or os.getenv("LAST_FM_API_SECRET") or ""
+        ).strip(),
+        lastfm_username=os.getenv("LASTFM_USERNAME", "").strip(),
         db_connection_string=os.getenv(
             "DB_CONNECTION_STRING",
             "postgresql+psycopg://postgres:postgres@localhost:5432/music_intelligence",
@@ -84,4 +91,10 @@ def get_settings() -> Settings:
         ).lower()
         in {"1", "true", "yes", "on"},
         dbt_executable=os.getenv("DBT_EXECUTABLE", "dbt"),
+        app_session_days=int(os.getenv("APP_SESSION_DAYS", "30")),
+        frontend_auth_redirect_url=os.getenv(
+            "FRONTEND_AUTH_REDIRECT_URL",
+            "http://localhost:3000",
+        ),
+        session_cookie_name=os.getenv("SESSION_COOKIE_NAME", "music_intelligence_session"),
     )

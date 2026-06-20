@@ -12,17 +12,46 @@ from app.ingestion.lastfm import (
     normalize_recent_track,
 )
 from app.ingestion.loader import RawLoader
+from app.services.auth import AuthenticatedUser, ensure_configured_user, get_user
 
 RECENT_SOURCE = "lastfm_recent_tracks"
 
 
-def _require_lastfm_settings() -> None:
+def _require_lastfm_settings(require_username: bool = True) -> None:
     settings = get_settings()
-    if not settings.lastfm_api_key or not settings.lastfm_username:
-        raise RuntimeError("LASTFM_API_KEY and LASTFM_USERNAME must be configured")
+    if not settings.lastfm_api_key:
+        raise RuntimeError("LASTFM_API_KEY must be configured")
+    if require_username and not settings.lastfm_username:
+        raise RuntimeError("LASTFM_USERNAME must be configured")
 
 
-def fetch_recent_tracks() -> dict[str, int]:
+def _resolve_lastfm_user(
+    connection,
+    user_id: str | None = None,
+    lastfm_username: str | None = None,
+) -> AuthenticatedUser:
+    if user_id is not None:
+        user = get_user(connection, user_id)
+        if user is None:
+            raise RuntimeError(f"Unknown app user: {user_id}")
+        if lastfm_username:
+            return AuthenticatedUser(
+                id=user.id,
+                lastfm_username=lastfm_username,
+                display_name=user.display_name,
+            )
+        return user
+
+    user = ensure_configured_user(connection)
+    if user is None:
+        raise RuntimeError("LASTFM_USERNAME must be configured")
+    return user
+
+
+def fetch_recent_tracks(
+    user_id: str | None = None,
+    lastfm_username: str | None = None,
+) -> dict[str, int]:
     _require_lastfm_settings()
     inserted = 0
     failed = 0
@@ -30,10 +59,11 @@ def fetch_recent_tracks() -> dict[str, int]:
     latest_played_at: datetime | None = None
 
     with db_connection() as connection:
-        loader = RawLoader(connection)
+        user = _resolve_lastfm_user(connection, user_id, lastfm_username)
+        loader = RawLoader(connection, user_id=user.id)
         last_fetched_at = loader.get_last_fetched_at(RECENT_SOURCE)
         from_unix = int(last_fetched_at.timestamp()) if last_fetched_at else None
-        client = LastFmClient()
+        client = LastFmClient(username=user.lastfm_username)
 
         try:
             for payload in client.iter_recent_tracks(from_unix=from_unix):
@@ -57,7 +87,7 @@ def fetch_recent_tracks() -> dict[str, int]:
         if latest_played_at is not None:
             loader.upsert_last_fetched_at(RECENT_SOURCE, latest_played_at)
 
-    if seen == 0 and get_settings().lastfm_username:
+    if seen == 0:
         send_slack_alert("recent_tracks", "Ingestion returned 0 rows", failed)
     if failed:
         send_slack_alert("recent_tracks", "Records written to raw.raw_failed", failed)
@@ -65,13 +95,13 @@ def fetch_recent_tracks() -> dict[str, int]:
     return {"seen": seen, "inserted": inserted, "failed": failed}
 
 
-def fetch_track_tags(limit: int = 100) -> dict[str, int]:
-    _require_lastfm_settings()
+def fetch_track_tags(limit: int = 100, user_id: str | None = None) -> dict[str, int]:
+    _require_lastfm_settings(require_username=False)
     processed = 0
     failed = 0
 
     with db_connection() as connection:
-        loader = RawLoader(connection)
+        loader = RawLoader(connection, user_id=user_id)
         client = LastFmClient()
         for target in loader.missing_track_tag_targets(limit=limit):
             try:
@@ -94,13 +124,13 @@ def fetch_track_tags(limit: int = 100) -> dict[str, int]:
     return {"processed": processed, "failed": failed}
 
 
-def fetch_artist_info(limit: int = 100) -> dict[str, int]:
-    _require_lastfm_settings()
+def fetch_artist_info(limit: int = 100, user_id: str | None = None) -> dict[str, int]:
+    _require_lastfm_settings(require_username=False)
     processed = 0
     failed = 0
 
     with db_connection() as connection:
-        loader = RawLoader(connection)
+        loader = RawLoader(connection, user_id=user_id)
         client = LastFmClient()
         for artist_name in loader.missing_artist_info_targets(limit=limit):
             try:
@@ -116,13 +146,13 @@ def fetch_artist_info(limit: int = 100) -> dict[str, int]:
     return {"processed": processed, "failed": failed}
 
 
-def fetch_artist_tags(limit: int = 100) -> dict[str, int]:
-    _require_lastfm_settings()
+def fetch_artist_tags(limit: int = 100, user_id: str | None = None) -> dict[str, int]:
+    _require_lastfm_settings(require_username=False)
     processed = 0
     failed = 0
 
     with db_connection() as connection:
-        loader = RawLoader(connection)
+        loader = RawLoader(connection, user_id=user_id)
         client = LastFmClient()
         for artist_name in loader.missing_artist_tag_targets(limit=limit):
             try:
@@ -138,18 +168,23 @@ def fetch_artist_tags(limit: int = 100) -> dict[str, int]:
     return {"processed": processed, "failed": failed}
 
 
-def fetch_user_charts(periods: tuple[str, ...] = ("7day", "1month", "6month", "overall")) -> dict[str, int]:
+def fetch_user_charts(
+    periods: tuple[str, ...] = ("7day", "1month", "6month", "overall"),
+    user_id: str | None = None,
+    lastfm_username: str | None = None,
+) -> dict[str, int]:
     _require_lastfm_settings()
     processed = 0
 
     with db_connection() as connection:
-        loader = RawLoader(connection)
+        user = _resolve_lastfm_user(connection, user_id, lastfm_username)
+        loader = RawLoader(connection, user_id=user.id)
         now = datetime.now(timezone.utc)
         last_fetched_at = loader.get_last_fetched_at("lastfm_user_charts")
         if last_fetched_at is not None and last_fetched_at.date() == now.date():
             return {"processed": 0, "skipped": 1}
 
-        client = LastFmClient()
+        client = LastFmClient(username=user.lastfm_username)
         for period in periods:
             for rank, artist in enumerate(client.get_top_artists(period=period), start=1):
                 loader.upsert_top_artist(
@@ -180,12 +215,15 @@ def fetch_user_charts(periods: tuple[str, ...] = ("7day", "1month", "6month", "o
     return {"processed": processed}
 
 
-def run_lastfm_ingestion() -> dict[str, Any]:
+def run_lastfm_ingestion(
+    user_id: str | None = None,
+    lastfm_username: str | None = None,
+) -> dict[str, Any]:
     started_at = datetime.now(timezone.utc)
     return {
         "started_at": started_at.isoformat(),
-        "recent_tracks": fetch_recent_tracks(),
-        "track_tags": fetch_track_tags(),
-        "artist_info": fetch_artist_info(),
-        "artist_tags": fetch_artist_tags(),
+        "recent_tracks": fetch_recent_tracks(user_id=user_id, lastfm_username=lastfm_username),
+        "track_tags": fetch_track_tags(user_id=user_id),
+        "artist_info": fetch_artist_info(user_id=user_id),
+        "artist_tags": fetch_artist_tags(user_id=user_id),
     }

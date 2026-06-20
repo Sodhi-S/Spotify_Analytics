@@ -1,4 +1,5 @@
 select
+    user_id,
     listen_id,
     track_id,
     artist_id,

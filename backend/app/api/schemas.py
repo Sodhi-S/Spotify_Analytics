@@ -8,6 +8,34 @@ from pydantic import BaseModel, Field
 Period = Literal["7d", "30d", "6m", "all"]
 
 
+class IngestionJobResponse(BaseModel):
+    id: str
+    job_type: str
+    status: str
+    result: dict[str, object]
+    error_message: str | None = None
+    created_at: str
+    started_at: str | None = None
+    completed_at: str | None = None
+
+
+class AuthUserResponse(BaseModel):
+    id: str
+    lastfm_username: str
+    display_name: str | None = None
+    has_password: bool
+    ingestion_job: IngestionJobResponse | None = None
+
+
+class PasswordLoginRequest(BaseModel):
+    lastfm_username: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class SetPasswordRequest(BaseModel):
+    password: str = Field(min_length=8, max_length=128)
+
+
 class TopTrack(BaseModel):
     track_id: str
     name: str

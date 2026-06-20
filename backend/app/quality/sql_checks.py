@@ -47,7 +47,10 @@ def run_raw_recent_tracks_suite() -> list[QualityResult]:
                 """
                 select count(*) as value
                 from raw.recent_tracks
-                where track_name is null or artist_name is null or played_at is null
+                where user_id is null
+                   or track_name is null
+                   or artist_name is null
+                   or played_at is null
                 """
             )
         ).scalar_one()

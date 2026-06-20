@@ -1,5 +1,24 @@
 export type Period = "7d" | "30d" | "6m" | "all";
 
+export interface IngestionJob {
+  id: string;
+  job_type: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  result: Record<string, unknown>;
+  error_message: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface AuthUser {
+  id: string;
+  lastfm_username: string;
+  display_name: string | null;
+  has_password: boolean;
+  ingestion_job: IngestionJob | null;
+}
+
 export interface OverviewResponse {
   period: Period;
   total_listens: number;

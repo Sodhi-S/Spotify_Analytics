@@ -7,6 +7,7 @@ tracks as (
 )
 
 select
+    listens.user_id,
     listens.date_id,
     count(*) as total_listens,
     count(distinct listens.track_id) as unique_tracks,
@@ -21,4 +22,6 @@ select
     sum(case when tracks.mood_label is null then 1 else 0 end) as mood_null_count
 from listens
 left join tracks on listens.track_id = tracks.track_id
-group by listens.date_id
+group by
+    listens.user_id,
+    listens.date_id

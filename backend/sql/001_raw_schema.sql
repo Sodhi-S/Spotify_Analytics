@@ -8,6 +8,7 @@ create table if not exists raw.ingestion_metadata (
 
 create table if not exists raw.raw_failed (
     id bigserial primary key,
+    user_id text references app.users(id) on delete cascade,
     source text not null,
     raw_payload jsonb not null,
     error_message text not null,
@@ -16,6 +17,7 @@ create table if not exists raw.raw_failed (
 
 create table if not exists raw.recent_tracks (
     id bigserial primary key,
+    user_id text not null references app.users(id) on delete cascade,
     track_name text not null,
     artist_name text not null,
     album text,
@@ -24,11 +26,11 @@ create table if not exists raw.recent_tracks (
     artist_mbid text,
     raw_payload jsonb not null,
     fetched_at timestamptz not null default current_timestamp,
-    constraint uq_recent_tracks_dedupe unique (played_at, track_name, artist_name)
+    constraint uq_recent_tracks_dedupe unique (user_id, played_at, track_name, artist_name)
 );
 
 create index if not exists idx_recent_tracks_played_at
-    on raw.recent_tracks (played_at);
+    on raw.recent_tracks (user_id, played_at);
 
 create index if not exists idx_recent_tracks_artist_track
     on raw.recent_tracks (artist_name, track_name);
@@ -89,25 +91,25 @@ create table if not exists raw.artist_image_enrichments (
 
 create table if not exists raw.top_artists (
     id bigserial primary key,
+    user_id text not null references app.users(id) on delete cascade,
     artist_name text not null,
     play_count bigint not null,
     rank integer not null,
     period text not null,
     fetched_at timestamptz not null default current_timestamp,
-    constraint uq_top_artists_artist_period_rank unique (artist_name, period, rank)
+    constraint uq_top_artists_user_period_rank unique (user_id, period, rank)
 );
 
 create table if not exists raw.top_tracks (
     id bigserial primary key,
+    user_id text not null references app.users(id) on delete cascade,
     track_name text not null,
     artist_name text not null,
     play_count bigint not null,
     rank integer not null,
     period text not null,
     fetched_at timestamptz not null default current_timestamp,
-    constraint uq_top_tracks_track_artist_period_rank unique (
-        track_name, artist_name, period, rank
-    )
+    constraint uq_top_tracks_user_period_rank unique (user_id, period, rank)
 );
 
 create table if not exists raw.weather (

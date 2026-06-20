@@ -45,12 +45,22 @@ def build_period_filter(period: str, today: date | None = None) -> PeriodFilter:
     return PeriodFilter(period=period, start_date=start_date)  # type: ignore[arg-type]
 
 
-def _date_clause(column_name: str, period_filter: PeriodFilter) -> str:
-    return "" if period_filter.start_date is None else f"where {column_name} >= :start_date"
+def _where_clause(
+    user_column: str,
+    date_column: str,
+    period_filter: PeriodFilter,
+) -> str:
+    clauses = [f"{user_column} = :user_id"]
+    if period_filter.start_date is not None:
+        clauses.append(f"{date_column} >= :start_date")
+    return "where " + " and ".join(clauses)
 
 
-def _params(period_filter: PeriodFilter) -> dict[str, Any]:
-    return {} if period_filter.start_date is None else {"start_date": period_filter.start_date}
+def _params(period_filter: PeriodFilter, user_id: str) -> dict[str, Any]:
+    params: dict[str, Any] = {"user_id": user_id}
+    if period_filter.start_date is not None:
+        params["start_date"] = period_filter.start_date
+    return params
 
 
 def _scalar_int(row: Any, key: str) -> int:
@@ -61,12 +71,13 @@ def _scalar_int(row: Any, key: str) -> int:
 
 
 class OverviewService:
-    def __init__(self, connection: Connection):
+    def __init__(self, connection: Connection, user_id: str):
         self.connection = connection
+        self.user_id = user_id
 
     def get_overview(self, period: str) -> OverviewResponse:
         period_filter = build_period_filter(period)
-        params = _params(period_filter)
+        params = _params(period_filter, self.user_id)
 
         summary = self._summary(period_filter, params)
         return OverviewResponse(
@@ -95,7 +106,7 @@ class OverviewService:
                 {mood_selects},
                 coalesce(sum(mood_null_count), 0) as unclassified
             from {qualified_table("mart_listening_summary")}
-            {_date_clause("date_id", period_filter)}
+            {_where_clause("user_id", "date_id", period_filter)}
             """
         )
         row = self.connection.execute(sql, params).first()
@@ -116,7 +127,7 @@ class OverviewService:
             f"""
             select count(distinct {column_name}) as count_value
             from {qualified_table("fact_listens")}
-            {_date_clause("date_id", period_filter)}
+            {_where_clause("user_id", "date_id", period_filter)}
             """
         )
         return _scalar_int(self.connection.execute(sql, params).first(), "count_value")
@@ -138,7 +149,7 @@ class OverviewService:
             left join {qualified_table("dim_tracks")} dt on fl.track_id = dt.track_id
             left join {qualified_table("dim_artists")} da
                 on fl.artist_id = da.artist_id and da.is_current = true
-            {_date_clause("fl.date_id", period_filter)}
+            {_where_clause("fl.user_id", "fl.date_id", period_filter)}
             group by fl.track_id, dt.name, dt.artist_name, da.name, dt.album_image_url
             order by play_count desc, name asc
             limit 5
@@ -161,7 +172,7 @@ class OverviewService:
             from {qualified_table("fact_listens")} fl
             left join {qualified_table("dim_artists")} da
                 on fl.artist_id = da.artist_id and da.is_current = true
-            {_date_clause("fl.date_id", period_filter)}
+            {_where_clause("fl.user_id", "fl.date_id", period_filter)}
             group by fl.artist_id, da.name, da.image_url
             order by play_count desc, name asc
             limit 5
@@ -180,7 +191,7 @@ class OverviewService:
                 tag,
                 coalesce(sum(listen_count), 0) as listen_count
             from {qualified_table("mart_tag_listen_counts")}
-            {_date_clause("date_id", period_filter)}
+            {_where_clause("user_id", "date_id", period_filter)}
             group by tag
             order by listen_count desc, tag asc
             limit 5

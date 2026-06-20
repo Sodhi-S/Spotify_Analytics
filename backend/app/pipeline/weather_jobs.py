@@ -14,11 +14,14 @@ from app.ingestion.openmeteo import OpenMeteoClient
 from app.services.settings import WeatherLocation, get_weather_location
 
 
-def fetch_daily_weather(target_date: date | None = None) -> dict[str, object]:
+def fetch_daily_weather(
+    target_date: date | None = None,
+    user_id: str | None = None,
+) -> dict[str, object]:
     client = OpenMeteoClient()
     try:
         with db_connection() as connection:
-            location = get_weather_location(connection)
+            location = get_weather_location(connection, user_id=user_id)
             weather = client.get_daily_weather(
                 location.city,
                 target_date=target_date,
@@ -36,21 +39,25 @@ def fetch_historical_weather(
     start_date: date | None = None,
     end_date: date | None = None,
     location: WeatherLocation | None = None,
+    user_id: str | None = None,
 ) -> dict[str, object]:
     client = OpenMeteoClient()
     try:
         with db_connection() as connection:
-            weather_location = location or get_weather_location(connection)
+            weather_location = location or get_weather_location(connection, user_id=user_id)
             if start_date is None or end_date is None:
+                user_filter = "where user_id = :user_id" if user_id is not None else ""
                 row = connection.execute(
                     text(
-                        """
+                        f"""
                         select
                             min(cast(played_at as date)) as min_date,
                             max(cast(played_at as date)) as max_date
                         from raw.recent_tracks
+                        {user_filter}
                         """
-                    )
+                    ),
+                    {"user_id": user_id} if user_id is not None else {},
                 ).first()
                 if row is None or row._mapping["min_date"] is None:
                     return {"inserted": 0, "reason": "no listening history found"}
@@ -79,8 +86,11 @@ def fetch_historical_weather(
         raise
 
 
-def process_weather_city(location: WeatherLocation) -> dict[str, object]:
-    ingestion_result = fetch_historical_weather(location=location)
+def process_weather_city(
+    location: WeatherLocation,
+    user_id: str | None = None,
+) -> dict[str, object]:
+    ingestion_result = fetch_historical_weather(location=location, user_id=user_id)
     dbt_result = rebuild_weather_models()
     return {"ingestion": ingestion_result, "dbt": dbt_result}
 

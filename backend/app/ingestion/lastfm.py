@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from datetime import datetime, timezone
+import hashlib
 from typing import Any
 
 from app.core.config import get_settings
@@ -38,7 +39,16 @@ class LastFmClient:
         settings = get_settings()
         self.api_key = api_key or settings.lastfm_api_key
         self.username = username or settings.lastfm_username
+        self.api_secret = settings.lastfm_api_secret
         self.rate_limiter = RateLimiter(calls_per_second=5)
+
+    def _api_signature(self, params: dict[str, Any]) -> str:
+        signature_base = "".join(
+            f"{key}{value}"
+            for key, value in sorted(params.items())
+            if key not in {"format", "callback"} and value is not None
+        )
+        return hashlib.md5(f"{signature_base}{self.api_secret}".encode("utf-8")).hexdigest()
 
     def request(self, method: str, **params: Any) -> dict[str, Any]:
         merged = {
@@ -47,7 +57,38 @@ class LastFmClient:
             "format": "json",
             **params,
         }
-        return get_json(LASTFM_BASE_URL, merged, rate_limiter=self.rate_limiter)
+        payload = get_json(LASTFM_BASE_URL, merged, rate_limiter=self.rate_limiter)
+        if payload.get("error"):
+            raise RuntimeError(str(payload.get("message") or "Last.fm API error"))
+        return payload
+
+    def signed_request(self, method: str, **params: Any) -> dict[str, Any]:
+        if not self.api_secret:
+            raise RuntimeError("LASTFM_API_SECRET must be configured for Last.fm authentication")
+        merged = {
+            "method": method,
+            "api_key": self.api_key,
+            **params,
+        }
+        payload = get_json(
+            LASTFM_BASE_URL,
+            {
+                **merged,
+                "api_sig": self._api_signature(merged),
+                "format": "json",
+            },
+            rate_limiter=self.rate_limiter,
+        )
+        if payload.get("error"):
+            raise RuntimeError(str(payload.get("message") or "Last.fm API error"))
+        return payload
+
+    def get_session(self, token: str) -> dict[str, Any]:
+        payload = self.signed_request("auth.getSession", token=token)
+        session = payload.get("session")
+        if not isinstance(session, dict) or not session.get("name") or not session.get("key"):
+            raise RuntimeError("Last.fm did not return a valid session")
+        return session
 
     def iter_recent_tracks(self, from_unix: int | None = None) -> Iterator[dict[str, Any]]:
         page = 1

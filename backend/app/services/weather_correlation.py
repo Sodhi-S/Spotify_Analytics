@@ -65,8 +65,11 @@ WEATHER_ORDER = (
 TEMPERATURE_ORDER = ("Freezing", "Cold", "Mild", "Warm", "Hot", "Unknown")
 
 
-def _params(start_date: object | None) -> dict[str, object]:
-    return {} if start_date is None else {"start_date": start_date}
+def _params(start_date: object | None, user_id: str) -> dict[str, object]:
+    params: dict[str, object] = {"user_id": user_id}
+    if start_date is not None:
+        params["start_date"] = start_date
+    return params
 
 
 def _float_or_none(value: Any) -> float | None:
@@ -136,6 +139,7 @@ def _top_tags_by_group(
     group_column: str,
     start_date: object | None,
     weather_city: str,
+    user_id: str,
 ) -> dict[str, list[dict[str, Any]]]:
     date_filter = "and tags.date_id >= :start_date" if start_date is not None else ""
     sql = text(
@@ -147,6 +151,7 @@ def _top_tags_by_group(
         from {qualified_table("mart_tag_listen_counts")} tags
         join {qualified_table("dim_weather")} dw on tags.date_id = dw.date_id
         where dw.city = :weather_city
+          and tags.user_id = :user_id
         {date_filter}
         group by dw.{group_column}, tags.tag
         order by dw.{group_column}, listen_count desc, tags.tag asc
@@ -155,7 +160,7 @@ def _top_tags_by_group(
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in connection.execute(
         sql,
-        {**_params(start_date), "weather_city": weather_city},
+        {**_params(start_date, user_id), "weather_city": weather_city},
     ):
         item = dict(row._mapping)
         label = str(item["label"] or "Unknown")
@@ -170,13 +175,14 @@ def _top_tags_by_group(
 
 
 class WeatherCorrelationService:
-    def __init__(self, connection: Connection):
+    def __init__(self, connection: Connection, user_id: str):
         self.connection = connection
+        self.user_id = user_id
 
     def get_weather_correlation(self, period: str) -> WeatherCorrelationResponse:
         period_filter = build_period_filter(period)
         start_date = period_filter.start_date
-        weather_city = get_weather_city(self.connection)
+        weather_city = get_weather_city(self.connection, user_id=self.user_id)
         daily_data = self._daily_data(start_date, weather_city)
         return WeatherCorrelationResponse(
             period=period_filter.period,
@@ -222,6 +228,7 @@ class WeatherCorrelationService:
             join {qualified_table("dim_dates")} d on m.date_id = d.date_id
             join {qualified_table("dim_weather")} dw on m.date_id = dw.date_id
             where dw.city = :weather_city
+              and m.user_id = :user_id
             {date_filter}
             order by d.date_id asc
             """
@@ -230,7 +237,7 @@ class WeatherCorrelationService:
         rows: list[dict[str, Any]] = []
         for row in self.connection.execute(
             sql,
-            {**_params(start_date), "weather_city": weather_city},
+            {**_params(start_date, self.user_id), "weather_city": weather_city},
         ):
             item = row._mapping
             rows.append(
@@ -271,7 +278,13 @@ class WeatherCorrelationService:
         start_date: object | None,
         weather_city: str,
     ) -> list[dict[str, Any]]:
-        top_tags = _top_tags_by_group(self.connection, group_column, start_date, weather_city)
+        top_tags = _top_tags_by_group(
+            self.connection,
+            group_column,
+            start_date,
+            weather_city,
+            self.user_id,
+        )
         date_filter = "and m.date_id >= :start_date" if start_date is not None else ""
         sql = text(
             f"""
@@ -292,6 +305,7 @@ class WeatherCorrelationService:
             from {qualified_table("mart_listening_summary")} m
             join {qualified_table("dim_weather")} dw on m.date_id = dw.date_id
             where dw.city = :weather_city
+              and m.user_id = :user_id
             {date_filter}
             group by dw.{group_column}
             order by total_listens desc, label asc
@@ -301,7 +315,7 @@ class WeatherCorrelationService:
         summaries: list[dict[str, Any]] = []
         for row in self.connection.execute(
             sql,
-            {**_params(start_date), "weather_city": weather_city},
+            {**_params(start_date, self.user_id), "weather_city": weather_city},
         ):
             item = row._mapping
             label = str(item["label"] or "Unknown")
@@ -339,6 +353,7 @@ class WeatherCorrelationService:
                 left join {qualified_table("dim_artists")} da
                     on fl.artist_id = da.artist_id and da.is_current = true
                 where dw.city = :weather_city
+                and fl.user_id = :user_id
                 {date_filter}
                 group by fl.artist_id, da.name, da.image_url, dw.weather_category
             ),
@@ -373,7 +388,7 @@ class WeatherCorrelationService:
         contexts: list[dict[str, Any]] = []
         for row in self.connection.execute(
             sql,
-            {**_params(start_date), "weather_city": weather_city},
+            {**_params(start_date, self.user_id), "weather_city": weather_city},
         ):
             item = row._mapping
             total_listens = int(item["total_listens"] or 0)
@@ -401,7 +416,7 @@ class WeatherCorrelationService:
         weather_city: str,
     ) -> dict[str, Any]:
         date_filter = "and fl.date_id >= :start_date" if start_date is not None else ""
-        params = {**_params(start_date), "weather_city": weather_city}
+        params = {**_params(start_date, self.user_id), "weather_city": weather_city}
 
         baseline = self._mood_baseline(date_filter, params)
         weather_rows = self._weather_mood_rows(date_filter, params)
@@ -457,6 +472,7 @@ class WeatherCorrelationService:
             join {qualified_table("dim_weather")} dw on fl.date_id = dw.date_id
             join {qualified_table("dim_tracks")} dt on fl.track_id = dt.track_id
             where dw.city = :weather_city
+              and fl.user_id = :user_id
               and dt.valence is not null
               and dt.energy is not null
               and dw.weather_category <> 'Unknown'
@@ -488,6 +504,7 @@ class WeatherCorrelationService:
             join {qualified_table("dim_weather")} dw on fl.date_id = dw.date_id
             join {qualified_table("dim_tracks")} dt on fl.track_id = dt.track_id
             where dw.city = :weather_city
+              and fl.user_id = :user_id
               and dt.valence is not null
               and dt.energy is not null
               and dw.weather_category <> 'Unknown'
@@ -531,6 +548,7 @@ class WeatherCorrelationService:
                 left join {qualified_table("dim_artists")} da
                     on fl.artist_id = da.artist_id and da.is_current = true
                 where dw.city = :weather_city
+                  and fl.user_id = :user_id
                   and dt.valence is not null
                   and dt.energy is not null
                   and dw.weather_category <> 'Unknown'
@@ -622,6 +640,7 @@ class WeatherCorrelationService:
                 join {qualified_table("dim_weather")} dw on fl.date_id = dw.date_id
                 join {qualified_table("dim_tracks")} dt on fl.track_id = dt.track_id
                 where dw.city = :weather_city
+                  and fl.user_id = :user_id
                   and dt.valence is not null
                   and dt.energy is not null
                   and dw.weather_category <> 'Unknown'
@@ -732,6 +751,7 @@ class WeatherCorrelationService:
             join {qualified_table("dim_weather")} dw on fl.date_id = dw.date_id
             join {qualified_table("dim_tracks")} dt on fl.track_id = dt.track_id
             where dw.city = :weather_city
+              and fl.user_id = :user_id
               and dt.valence is not null
               and dt.energy is not null
               and dw.temperature_bucket <> 'Unknown'
